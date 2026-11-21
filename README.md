@@ -19,4 +19,4 @@ MeTube Companion has **no login**. Run it on your home network or behind a VPN o
 
 ## License
 
-To be decided before the first release.
+[MIT](LICENSE)
