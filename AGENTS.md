@@ -5,6 +5,7 @@ Installing for a user? Read [INSTALL.md](INSTALL.md) instead. This file is for c
 ## Layout
 
 - `web/`: the web UI (plain HTML/CSS/JS, no build step). `shared.js` and `shared.css` are shared with the extension: formats, payloads, language detection, progress, icons, colors, format cells, text panel. Change shared behavior there, not twice.
+- `web/i18n/`: one strings file per UI language (`de.js`), loaded before `shared.js`, active only when the browser's first language matches.
 - `extension/`: Chromium (MV3, `manifest.chromium.json`) and Firefox (MV2, `manifest.json`) from one source. `build.sh` copies `../web/shared.*` into the packages.
 - `nginx/default.conf.template`: rendered at container start (envsubst): `/api/` (UI), `/ext/` (extension, CORS + MeTube's Sec-Fetch-Site guard), `/yt/<id>` (watch page for language detection), `/files/` (listing, DELETE of files), `/config.js`, `/healthz`.
 - `docker/`, `Dockerfile`: image runs nginx as any user; `40-cleanup.sh` does `RETENTION_DAYS`.
@@ -23,7 +24,7 @@ Not a stable API; re-check after MeTube updates.
 
 ## Rules
 
-- English everywhere (UI, comments, docs).
+- Code, comments and docs in English. UI text is English by default; translations live in `web/i18n/<lang>.js` (English text -> translation, picked from the browser language, web UI only). New UI strings go through `t()` (or `data-i18n` in `index.html`) and need a German entry; `tests/i18n.test.mjs` fails otherwise. The extension stays English (no dictionary loaded).
 - No login exists. Never add anything that makes exposing the instance look safe; keep the warnings.
 - Every UI action must stay understandable for a first-time user: a verb in each format cell, only destructive actions ask for confirmation.
 - Keep `COMPANION_VERSION` in `web/shared.js` and both extension manifests in sync on release.
@@ -48,7 +49,8 @@ docker compose -f docker-compose.factory.yml down -v
 ## Check before committing
 
 ```sh
-for f in web/*.js extension/*.js; do node --check "$f"; done
+for f in web/*.js web/i18n/*.js extension/*.js; do node --check "$f"; done
+node --test   # unit tests in tests/ (i18n coverage)
 ./extension/build.sh
 docker build -t metube-companion:test .
 tests/smoke.sh   # MeTube + companion end to end, incl. token and file rules

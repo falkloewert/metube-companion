@@ -16,20 +16,20 @@
   <main class="shell">
     <header class="top">
       <h1>MeTube Companion</h1>
-      <span id="conn" class="conn" aria-live="polite">Connected</span>
+      <span id="conn" class="conn" aria-live="polite" data-i18n>Connected</span>
     </header>
 
     <form class="card login" id="login" hidden>
-      <p><strong>This instance is protected.</strong> Enter the access token (COMPANION_TOKEN) once; this browser remembers it.</p>
+      <p data-i18n><strong>This instance is protected.</strong> Enter the access token (COMPANION_TOKEN) once; this browser remembers it.</p>
       <div class="row">
-        <label class="sr-only" for="token">Access token</label>
+        <label class="sr-only" for="token" data-i18n>Access token</label>
         <input id="token" type="password" autocomplete="current-password" placeholder="Access token">
-        <button type="submit" class="btn">Unlock</button>
+        <button type="submit" class="btn" data-i18n>Unlock</button>
       </div>
     </form>
 
     <section class="card composer">
-      <label class="sr-only" for="url">Link</label>
+      <label class="sr-only" for="url" data-i18n>Link</label>
       <div class="urlwrap">
         <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off"
                spellcheck="false" enterkeyhint="go" placeholder="Paste a link">
@@ -37,88 +37,88 @@
       </div>
 
       <div class="tiles" id="tiles" role="group" aria-label="What to download">
-        <button type="button" class="tile" data-kind="video" aria-label="Download video"><span class="name">Video</span></button>
-        <button type="button" class="tile" data-kind="audio" aria-label="Download audio"><span class="name">Audio</span></button>
-        <button type="button" class="tile" data-kind="captions" aria-label="Download text"><span class="name">Text</span></button>
+        <button type="button" class="tile" data-kind="video" aria-label="Download video"><span class="name" data-i18n>Video</span></button>
+        <button type="button" class="tile" data-kind="audio" aria-label="Download audio"><span class="name" data-i18n>Audio</span></button>
+        <button type="button" class="tile" data-kind="captions" aria-label="Download text"><span class="name" data-i18n>Text</span></button>
       </div>
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
     </section>
 
     <section class="group" aria-labelledby="active-title" hidden>
-      <h2 id="active-title">Running</h2>
+      <h2 id="active-title" data-i18n>Running</h2>
       <ul id="active" class="list"></ul>
     </section>
 
     <section class="group" aria-labelledby="done-title">
       <div class="grouphead">
-        <h2 id="done-title">History</h2>
-        <button type="button" class="clearall" id="clearall" hidden>Clear all</button>
+        <h2 id="done-title" data-i18n>History</h2>
+        <button type="button" class="clearall" id="clearall" hidden data-i18n>Clear all</button>
       </div>
       <div class="clearbar" id="clearbar" hidden role="alertdialog" aria-labelledby="clearq">
         <p id="clearq"></p>
         <div class="row">
-          <button type="button" class="btn danger" id="clear-files">Delete files too</button>
-          <button type="button" class="btn" id="clear-history">Keep files</button>
-          <button type="button" class="btn" id="clear-cancel">Cancel</button>
+          <button type="button" class="btn danger" id="clear-files" data-i18n>Delete files too</button>
+          <button type="button" class="btn" id="clear-history" data-i18n>Keep files</button>
+          <button type="button" class="btn" id="clear-cancel" data-i18n>Cancel</button>
         </div>
       </div>
       <div class="filters" id="filters" hidden>
-        <label class="sr-only" for="q">Search history</label>
+        <label class="sr-only" for="q" data-i18n>Search history</label>
         <input type="search" id="q" placeholder="Search titles" autocomplete="off">
         <div class="chips">
-          <button type="button" class="chip" data-f="video" aria-pressed="false">Video</button>
-          <button type="button" class="chip" data-f="audio" aria-pressed="false">Audio</button>
-          <button type="button" class="chip" data-f="captions" aria-pressed="false">Text</button>
-          <button type="button" class="chip" data-f="failed" aria-pressed="false">Failed</button>
+          <button type="button" class="chip" data-f="video" aria-pressed="false" data-i18n>Video</button>
+          <button type="button" class="chip" data-f="audio" aria-pressed="false" data-i18n>Audio</button>
+          <button type="button" class="chip" data-f="captions" aria-pressed="false" data-i18n>Text</button>
+          <button type="button" class="chip" data-f="failed" aria-pressed="false" data-i18n>Failed</button>
         </div>
       </div>
       <ul id="done" class="list"></ul>
-      <p id="done-nomatch" class="empty" hidden>No matches.</p>
-      <p id="done-empty" class="empty">Nothing downloaded yet. Paste a link above and tap a format twice.</p>
+      <p id="done-nomatch" class="empty" hidden data-i18n>No matches.</p>
+      <p id="done-empty" class="empty" data-i18n>Nothing downloaded yet. Paste a link above and tap a format twice.</p>
     </section>
 
     <details class="card more" id="trash" hidden>
-      <summary>Trash<span id="trash-count"></span></summary>
-      <p class="explain">Deleted videos wait here for <span id="trash-days"></span>, then they are removed for good. "Restore" puts all their files back and the video shows up in the history again.</p>
+      <summary><span data-i18n>Trash</span><span id="trash-count"></span></summary>
+      <p class="explain" data-i18n>Deleted videos wait here for <span id="trash-days"></span>, then they are removed for good. "Restore" puts all their files back and the video shows up in the history again.</p>
       <ul id="trash-list" class="list"></ul>
-      <p id="trash-empty" class="empty">The trash is empty.</p>
-      <div class="row"><button type="button" class="btn danger" id="trash-purge" hidden>Empty trash</button></div>
+      <p id="trash-empty" class="empty" data-i18n>The trash is empty.</p>
+      <div class="row"><button type="button" class="btn danger" id="trash-purge" hidden data-i18n>Empty trash</button></div>
     </details>
 
     <details class="card more">
-      <summary>Download settings</summary>
-      <p class="explain">Used by the Video and Audio tiles and by "request" on a card. Saved in this browser only. Defaults: best video quality, M4A audio.</p>
+      <summary data-i18n>Download settings</summary>
+      <p class="explain" data-i18n>Used by the Video and Audio tiles and by "request" on a card. Saved in this browser only. Defaults: best video quality, M4A audio.</p>
       <div class="row">
-        <label for="pref-videoQuality">Video quality</label>
+        <label for="pref-videoQuality" data-i18n>Video quality</label>
         <select id="pref-videoQuality" class="select"></select>
       </div>
       <div class="row">
-        <label for="pref-audioFormat">Audio format</label>
+        <label for="pref-audioFormat" data-i18n>Audio format</label>
         <select id="pref-audioFormat" class="select"></select>
       </div>
     </details>
 
     <details class="card more">
-      <summary>Cookies</summary>
-      <p class="explain">Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.</p>
+      <summary data-i18n>Cookies</summary>
+      <p class="explain" data-i18n>Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.</p>
       <div class="row">
         <label class="btn file">
-          <span>Choose file</span>
+          <span data-i18n>Choose file</span>
           <input id="cookie-file" type="file" accept=".txt,text/plain">
         </label>
-        <button type="button" class="btn" id="cookie-delete" hidden>Remove</button>
+        <button type="button" class="btn" id="cookie-delete" hidden data-i18n>Remove</button>
       </div>
       <p id="cookie-status" class="explain" role="status" aria-live="polite"></p>
     </details>
 
     <details class="card more">
-      <summary>Extension and help</summary>
-      <p class="explain">The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.</p>
+      <summary data-i18n>Extension and help</summary>
+      <p class="explain" data-i18n>The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.</p>
       <div class="row">
-        <a class="btn" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-chromium.zip">Chromium extension</a>
-        <a class="btn" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-firefox.xpi">Firefox extension</a>
-        <a class="btn" href="https://github.com/falkloewert/metube-companion/issues/new" target="_blank" rel="noopener">Report a problem</a>
+        <a class="btn" data-i18n href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-chromium.zip">Chromium extension</a>
+        <a class="btn" data-i18n href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-firefox.xpi">Firefox extension</a>
+        <a class="btn" data-i18n href="https://github.com/falkloewert/metube-companion/issues/new" target="_blank" rel="noopener">Report a problem</a>
       </div>
     </details>
   </main>
@@ -126,6 +126,7 @@
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script src="config.js"></script>
+  <script src="i18n/de.js"></script>
   <script src="shared.js"></script>
   <script src="app.js"></script>
 </body>

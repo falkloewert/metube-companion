@@ -5,6 +5,33 @@
 // extension service worker); the DOM helpers at the bottom are only called by
 // web/app.js and extension/popup.js. Copied into the extension by build.sh.
 
+// UI text: English is the source. web/i18n/<lang>.js sets window.I18N
+// (English text -> translation) when the browser language matches; without it
+// (extension, English browsers) t() returns the English text. {name} in a text
+// is filled from vars. New UI strings go through t() and need an entry in
+// web/i18n/de.js (tests/i18n.test.mjs checks that).
+function t(text, vars) {
+  const dict = globalThis.I18N;
+  const s = dict && Object.prototype.hasOwnProperty.call(dict, text) ? dict[text] : text;
+  return vars ? s.replace(/\{(\w+)\}/g, (m, k) => (k in vars ? String(vars[k]) : m)) : s;
+}
+
+// Static page text: elements marked data-i18n are translated by their inner
+// HTML (the key), placeholder, aria-label and title attributes by their value.
+// Only the web UI calls this; a no-op without a dictionary.
+function translatePage(root) {
+  if (!globalThis.I18N) return;
+  const scope = root || document;
+  scope.querySelectorAll('[data-i18n]').forEach((e) => {
+    const key = e.innerHTML.trim().replace(/\s+/g, ' ');
+    const text = t(key);
+    if (text !== key) e.innerHTML = text;
+  });
+  scope.querySelectorAll('[placeholder],[aria-label],[title]').forEach((e) => {
+    ['placeholder', 'aria-label', 'title'].forEach((a) => { if (e.hasAttribute(a)) e.setAttribute(a, t(e.getAttribute(a))); });
+  });
+}
+
 // Bump together with the extension manifests on every release.
 const COMPANION_VERSION = '0.2.0';
 const ISSUES_URL = 'https://github.com/falkloewert/metube-companion/issues/new';
@@ -171,7 +198,7 @@ function wordsLang(html) {
 // postJson(path, body) posts to MeTube ("/retry", "/delete").
 async function retryJob(url, postJson) {
   const res = await postJson('/retry', { id: url });
-  if (res && res.status === 'error') throw new Error(res.msg || 'Retry failed.');
+  if (res && res.status === 'error') throw new Error(res.msg || t('Retry failed.'));
   await postJson('/delete', { ids: [url], where: 'done' });
 }
 
@@ -188,12 +215,12 @@ function shouldAutoRetry(item, retried, now) {
 
 function friendlyError(msg) {
   const m = String(msg || '');
-  if (/429|Too Many Requests/i.test(m)) return 'YouTube is blocking requests right now (too many). Try again later.';
-  if (/cookies are no longer valid/i.test(m)) return 'The stored YouTube cookies have expired. Send once via the extension (it sends fresh ones) or remove them under "Cookies".';
-  if (/HTTP Error 403|Forbidden/i.test(m)) return 'YouTube refused the download (403). Usually temporary: tap retry.';
-  if (/Sign in to confirm/i.test(m)) return 'YouTube wants a sign-in. Send cookies via the extension and try again.';
-  if (/private|unavailable/i.test(m)) return 'Video is private or unavailable.';
-  return m.replace(/^ERROR:\s*/i, '') || 'Error';
+  if (/429|Too Many Requests/i.test(m)) return t('YouTube is blocking requests right now (too many). Try again later.');
+  if (/cookies are no longer valid/i.test(m)) return t('The stored YouTube cookies have expired. Send once via the extension (it sends fresh ones) or remove them under "Cookies".');
+  if (/HTTP Error 403|Forbidden/i.test(m)) return t('YouTube refused the download (403). Usually temporary: tap retry.');
+  if (/Sign in to confirm/i.test(m)) return t('YouTube wants a sign-in. Send cookies via the extension and try again.');
+  if (/private|unavailable/i.test(m)) return t('Video is private or unavailable.');
+  return m.replace(/^ERROR:\s*/i, '') || t('Error');
 }
 
 function isFailed(item) {
@@ -202,14 +229,14 @@ function isFailed(item) {
 
 function failReason(item) {
   if (item && item.status === 'finished' && !item.filename) {
-    return item.download_type === 'captions' ? 'no text found' : 'no file';
+    return item.download_type === 'captions' ? t('no text found') : t('no file');
   }
   return friendlyError(item && (item.msg || item.error));
 }
 
 function checkAddResult(res) {
-  if (res && res.status === 'error') throw new Error(res.msg || 'MeTube rejected the request.');
-  if (res && /already/i.test(res.msg || '')) throw new Error('Already running.');
+  if (res && res.status === 'error') throw new Error(res.msg || t('MeTube rejected the request.'));
+  if (res && /already/i.test(res.msg || '')) throw new Error(t('Already running.'));
 }
 
 function relPath(filename) {
@@ -298,13 +325,13 @@ function progress(job, progs) {
     s.last = p;
     const parts = kind === 'video' ? 2 : 1;
     s.shown = Math.max(s.shown, Math.min(99, ((Math.min(s.part, parts) - 1) * 100 + p) / parts));
-    return { pct: s.shown, verb: 'loading ' + Math.round(s.shown) + ' %' };
+    return { pct: s.shown, verb: t('loading {pct} %', { pct: Math.round(s.shown) }) };
   }
   if ((job.status === 'postprocessing' || job.status === 'finished') && (s.shown > 0 || p >= 100)) {
     s.shown = 100;
-    return { pct: 100, verb: 'finishing …' };
+    return { pct: 100, verb: t('finishing …') };
   }
-  return s.shown ? { pct: s.shown, verb: 'loading ' + Math.round(s.shown) + ' %' } : { pct: null, verb: 'starting …' };
+  return s.shown ? { pct: s.shown, verb: t('loading {pct} %', { pct: Math.round(s.shown) }) } : { pct: null, verb: t('starting …') };
 }
 
 // ---- Shared DOM helpers (web/app.js and extension/popup.js) ------------------
@@ -316,10 +343,11 @@ function flash(btn) {
   setTimeout(() => btn.classList.remove('flash'), 900);
 }
 
+// verb: already translated text (t(VERBS[state]), progress().verb).
 function setVerb(c, verb) {
-  const label = LABEL[c.dataset.kind];
+  const label = t(LABEL[c.dataset.kind]);
   c.querySelector('.verb').textContent = verb;
-  c.title = verb === 'waiting' ? label + ': only when the running job is done' : label + ' ' + verb;
+  c.title = c.dataset.state === 'blocked' ? t('{label}: only when the running job is done', { label }) : label + ' ' + verb;
   c.setAttribute('aria-label', c.title);
 }
 
@@ -337,20 +365,22 @@ function setThumb(el, url, kind, allowThumb, lazy) {
 
 // Two-tap tiles: first tap selects, second tap sends. Esc, outside click or 4 s cancels.
 function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
-  tiles.querySelectorAll('.tile').forEach((t) => {
-    t.insertAdjacentHTML('afterbegin', ICON[t.dataset.kind].replace('<svg', '<svg class="ico"') + SPIN + CHECK('check'));
-    t.insertAdjacentHTML('beforeend',
-      '<span class="ask">tap again</span><span class="busytxt">sending …</span><span class="donetxt">sent</span>');
+  tiles.querySelectorAll('.tile').forEach((el) => {
+    el.insertAdjacentHTML('afterbegin', ICON[el.dataset.kind].replace('<svg', '<svg class="ico"') + SPIN + CHECK('check'));
+    el.insertAdjacentHTML('beforeend',
+      '<span class="ask">' + t('tap again') + '</span><span class="busytxt">' + t('sending …') +
+      '</span><span class="donetxt">' + t('sent') + '</span>');
   });
 
   let armed = null;
+  let armedMsg = '';
   let armTimer = null;
   let sending = false;
   const tile = (kind) => tiles.querySelector('[data-kind="' + kind + '"]');
 
   function disarm() {
     clearTimeout(armTimer);
-    if (armed && statusEl.textContent.endsWith('again to start.')) setStatus('');
+    if (armed && statusEl.textContent === armedMsg) setStatus('');
     armed = null;
     tiles.classList.remove('armed');
     tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
@@ -364,7 +394,7 @@ function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
     armTimer = setTimeout(disarm, 4000);
   }
 
-  function burst(t) {
+  function burst(tileEl) {
     for (let i = 0; i < 12; i++) {
       const s = document.createElement('span');
       const size = 3 + Math.random() * 3;
@@ -372,9 +402,9 @@ function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
       s.style.width = s.style.height = size + 'px';
       s.style.setProperty('--a', (i * 30 + (Math.random() * 20 - 10)) + 'deg');
       s.style.setProperty('--d', -(24 + Math.random() * 15) + 'px');
-      t.appendChild(s);
+      tileEl.appendChild(s);
     }
-    setTimeout(() => t.querySelectorAll('.burst').forEach((s) => s.remove()), 700);
+    setTimeout(() => tileEl.querySelectorAll('.burst').forEach((s) => s.remove()), 700);
   }
 
   function shakeUrl(msg) {
@@ -386,36 +416,37 @@ function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
   }
 
   tiles.addEventListener('click', async (e) => {
-    const t = e.target.closest('.tile');
-    if (!t || sending) return;
+    const tileEl = e.target.closest('.tile');
+    if (!tileEl || sending) return;
     const url = urlInput.value.trim();
-    if (!url) { shakeUrl('Paste a link first.'); return; }
-    if (!isWebUrl(url)) { shakeUrl('That does not look like a link.'); return; }
-    const kind = t.dataset.kind;
+    if (!url) { shakeUrl(t('Paste a link first.')); return; }
+    if (!isWebUrl(url)) { shakeUrl(t('That does not look like a link.')); return; }
+    const kind = tileEl.dataset.kind;
     if (armed !== kind) {
       arm(kind);
-      setStatus('Tap "' + LABEL[kind] + '" again to start.');
+      armedMsg = t('Tap "{label}" again to start.', { label: t(LABEL[kind]) });
+      setStatus(armedMsg);
       return;
     }
     disarm();
     sending = true;
     tiles.classList.add('sending');
-    t.classList.add('busy');
-    setStatus(kind === 'captions' ? 'Detecting language …' : 'Sending …');
+    tileEl.classList.add('busy');
+    setStatus(kind === 'captions' ? t('Detecting language …') : t('Sending …'));
     try {
       const res = await onSend(canonical(url), kind);
-      t.classList.remove('busy');
-      t.classList.add('done');
-      burst(t);
+      tileEl.classList.remove('busy');
+      tileEl.classList.add('done');
+      burst(tileEl);
       setStatus(res.status);
       urlInput.value = '';
       if (onSent) onSent(res);
-      setTimeout(() => { t.classList.remove('done'); tiles.classList.remove('sending'); sending = false; }, 1300);
+      setTimeout(() => { tileEl.classList.remove('done'); tiles.classList.remove('sending'); sending = false; }, 1300);
     } catch (err) {
-      t.classList.remove('busy');
-      t.classList.add('fail');
-      setStatus(err.message || 'That did not work.', true);
-      setTimeout(() => { t.classList.remove('fail'); tiles.classList.remove('sending'); sending = false; }, 600);
+      tileEl.classList.remove('busy');
+      tileEl.classList.add('fail');
+      setStatus(err.message || t('That did not work.'), true);
+      setTimeout(() => { tileEl.classList.remove('fail'); tiles.classList.remove('sending'); sending = false; }, 600);
     }
   });
 
@@ -433,7 +464,7 @@ function makeFormatCells(container) {
     c.className = 'fmt';
     c.dataset.kind = f.kind;
     c.innerHTML = ICON[f.kind] + SPIN + CHECK('tick') +
-      '<span class="lbl">' + f.label + '</span><span class="verb"></span>';
+      '<span class="lbl">' + t(f.label) + '</span><span class="verb"></span>';
     container.appendChild(c);
     cells[f.kind] = c;
   }
@@ -455,7 +486,7 @@ function updateFormatCells(cells, { busy, files, failed, itemKind, panelHidden, 
       c.dataset.state = state;
       if (state === 'busy') c.dataset.sent = Date.now();
     }
-    let verb = state === 'have' && f.kind === 'captions' ? (panelHidden ? 'show' : 'hide') : VERBS[state];
+    let verb = state === 'have' && f.kind === 'captions' ? (panelHidden ? t('show') : t('hide')) : t(VERBS[state]);
     const job = busy.get(f.kind);
     const run = job ? progress(job, progs) : null;
     c.classList.toggle('wait', !!run && run.pct === null);
@@ -475,17 +506,17 @@ function toggleTextPanel(panel, cell, open, loadText) {
   panel.hidden = !open;
   cell.classList.toggle('open', open);
   cell.setAttribute('aria-expanded', String(open));
-  if (cell.dataset.state === 'have') setVerb(cell, open ? 'hide' : 'show');
+  if (cell.dataset.state === 'have') setVerb(cell, open ? t('hide') : t('show'));
   if (!open) return;
   const preview = panel.querySelector('.preview');
   const head = panel.querySelector('.tp-head');
-  head.textContent = 'Preview';
-  preview.textContent = 'Loading text …';
+  head.textContent = t('Preview');
+  preview.textContent = t('Loading text …');
   preview.classList.add('loading');
-  loadText().then((t) => {
-    preview.textContent = t || 'The text is empty.';
-    head.textContent = 'Preview · ' + (t ? t.split(' ').length : 0).toLocaleString() + ' words';
-  }, (e) => { preview.textContent = 'Could not load text: ' + e.message; })
+  loadText().then((text) => {
+    preview.textContent = text || t('The text is empty.');
+    head.textContent = t('Preview · {n} words', { n: (text ? text.split(' ').length : 0).toLocaleString() });
+  }, (e) => { preview.textContent = t('Could not load text: {msg}', { msg: e.message }); })
     .finally(() => preview.classList.remove('loading'));
 }
 
@@ -498,16 +529,16 @@ async function handleFormatClick(c, { item, files, onToggleText, onSave, onCance
   if (state === 'busy') {
     if (!c.classList.contains('cancel')) {
       c.classList.add('cancel');
-      setVerb(c, 'tap to cancel');
+      setVerb(c, t('tap to cancel'));
       setTimeout(() => c.classList.remove('cancel'), 4000);
       return;
     }
     c.classList.remove('cancel');
     try {
       await onCancel(item.url);
-      notify('Cancelled.');
+      notify(t('Cancelled.'));
     } catch (e) {
-      notify('Cancel did not work: ' + e.message, true);
+      notify(t('Cancel did not work: {msg}', { msg: e.message }), true);
     }
     onAfter();
     return;
@@ -518,14 +549,14 @@ async function handleFormatClick(c, { item, files, onToggleText, onSave, onCance
       await onSave(files[kind], kind);
       flash(c);
     } catch (e) {
-      notify('Download failed: ' + e.message, true);
+      notify(t('Download failed: {msg}', { msg: e.message }), true);
     }
     return;
   }
   c.dataset.state = 'busy';
   c.dataset.inflight = '1';
   c.classList.add('wait');
-  setVerb(c, 'starting …');
+  setVerb(c, t('starting …'));
   try {
     if (state === 'fail' && item.status === 'error') {
       await onRetry(item.url);
@@ -533,13 +564,13 @@ async function handleFormatClick(c, { item, files, onToggleText, onSave, onCance
       await onRequest(item.url, kind);
     }
     c.dataset.sent = Date.now();
-    notify(LABEL[kind] + ' is loading.');
+    notify(t('{label} is loading.', { label: t(LABEL[kind]) }));
     setTimeout(onAfter, 600);
   } catch (e) {
     c.classList.remove('wait');
     c.dataset.state = state;
-    setVerb(c, VERBS[state]);
-    notify(e.message || 'That did not work.', true);
+    setVerb(c, t(VERBS[state]));
+    notify(e.message || t('That did not work.'), true);
   } finally {
     delete c.dataset.inflight;
   }
