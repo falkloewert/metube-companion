@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 - 2026-11-22
 
 - Web UI: German translation, picked from the browser language (first entry of the language list); everything else stays English. One strings file per language in `web/i18n/`, so more languages are a single file (#21). The extension stays English.
 - YouTube 403 ("refused the download") is retried once automatically by the web UI and the extension; in tests about 1 in 15 downloads hit it and the retry worked.
