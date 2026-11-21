@@ -191,3 +191,9 @@ a.title:hover { text-decoration: underline; }
 .item.trashed .btn { flex: none; min-height: 38px; }
 .empty[hidden] { display: none; }
 #trash-count { margin-left: .35em; color: var(--muted); }
+
+.select {
+  height: 40px; padding: 0 14px; border: 0; border-radius: 999px;
+  background: var(--soft); color: inherit; font: inherit;
+}
+.row label { align-self: center; min-width: 110px; font-size: 14px; }

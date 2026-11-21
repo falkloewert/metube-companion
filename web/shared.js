@@ -57,6 +57,31 @@ const PAYLOADS = {
   thumbnail: { download_type: 'thumbnail', format: 'jpg', quality: 'best' },
 };
 
+// Optional choices (values are MeTube's own, see GET /formats). Defaults equal
+// the tiles' original behavior. Stored per browser (web) or in the extension.
+const PREF_OPTIONS = {
+  videoQuality: [['best', 'Best'], ['1080', '1080p'], ['720', '720p'], ['480', '480p']],
+  audioFormat: [['m4a', 'M4A'], ['mp3', 'MP3'], ['opus', 'Opus']],
+};
+const PREF_DEFAULTS = { videoQuality: 'best', audioFormat: 'm4a' };
+
+function normalizePrefs(raw) {
+  const out = Object.assign({}, PREF_DEFAULTS);
+  Object.keys(PREF_OPTIONS).forEach((k) => {
+    if (raw && PREF_OPTIONS[k].some(([v]) => v === raw[k])) out[k] = raw[k];
+  });
+  return out;
+}
+
+// Body for MeTube's /add (without url and language): PAYLOADS plus the prefs.
+function buildPayload(kind, prefs) {
+  const p = normalizePrefs(prefs);
+  const body = Object.assign({}, PAYLOADS[kind] || PAYLOADS.video);
+  if (kind === 'video') body.quality = p.videoQuality;
+  if (kind === 'audio') body.format = p.audioFormat;
+  return body;
+}
+
 const FORMATS = [
   { kind: 'video', label: 'Video', ext: /^(mp4|webm|mkv|mov)$/i },
   { kind: 'audio', label: 'Audio', ext: /^(m4a|mp3|opus|ogg|wav|flac)$/i },

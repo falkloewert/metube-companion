@@ -12,9 +12,23 @@ function say(text, bad) {
   status.className = bad ? 'bad' : 'ok';
 }
 
-browser.storage.local.get(['base', 'token']).then(({ base: saved, token: savedToken }) => {
+// Download settings (shared.js): saved right away on change.
+const prefSelects = Object.keys(PREF_OPTIONS).map((k) => {
+  const sel = document.getElementById(k);
+  PREF_OPTIONS[k].forEach(([v, t]) => sel.add(new Option(t, v)));
+  sel.addEventListener('change', async () => {
+    const { prefs } = await browser.storage.local.get('prefs');
+    await browser.storage.local.set({ prefs: Object.assign(normalizePrefs(prefs), { [k]: sel.value }) });
+    say('Saved.');
+  });
+  return [k, sel];
+});
+
+browser.storage.local.get(['base', 'token', 'prefs']).then(({ base: saved, token: savedToken, prefs }) => {
   base.value = saved || DEFAULT_BASE;
   token.value = savedToken || '';
+  const p = normalizePrefs(prefs);
+  prefSelects.forEach(([k, sel]) => { sel.value = p[k]; });
 });
 
 document.getElementById('save').addEventListener('click', async () => {

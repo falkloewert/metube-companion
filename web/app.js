@@ -87,7 +87,7 @@ async function detectLang(url) {
 }
 
 async function add(url, kind) {
-  const body = Object.assign({ url }, PAYLOADS[kind] || PAYLOADS.video);
+  const body = Object.assign({ url }, buildPayload(kind, prefs));
   if (kind === 'captions') body.subtitle_language = await detectLang(url);
   checkAddResult(await post('/add', body));
   return body.subtitle_language;
@@ -853,6 +853,21 @@ if (TRASH_DAYS) {
   trashEl.box.hidden = false;
   trashEl.box.addEventListener('toggle', () => { if (trashEl.box.open) loadTrash(); });
 }
+
+// ---- Download settings -------------------------------------------------------
+
+const prefs = (() => {
+  try { return normalizePrefs(JSON.parse(localStorage.getItem('prefs'))); } catch (_) { return normalizePrefs(null); }
+})();
+Object.keys(PREF_OPTIONS).forEach((k) => {
+  const sel = $('pref-' + k);
+  PREF_OPTIONS[k].forEach(([v, t]) => sel.add(new Option(t, v)));
+  sel.value = prefs[k];
+  sel.addEventListener('change', () => {
+    prefs[k] = sel.value;
+    try { localStorage.setItem('prefs', JSON.stringify(prefs)); } catch (_) { /* ignore */ }
+  });
+});
 
 // ---- Cookies ---------------------------------------------------------------
 

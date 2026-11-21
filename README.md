@@ -12,6 +12,7 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 - **One card per video.** The history shows every video once, with all formats side by side: *save* what is there, *request* what is missing, and watch progress right inside the cell.
 - **Transcripts that just work.** Detects whether a YouTube video is spoken in English or German (including AI-dubbed videos), fetches the original caption track to dodge YouTube's 429 errors, and turns captions into clean text. Preview, copy, or save as Markdown.
 - **Browser extension** (Chromium; Firefox until it is in the add-on store only as a temporary add-on). Sends the current tab, with the cookies of that site (YouTube, Instagram, TikTok) for signed-in content, shows the same format cells, and notifies you when a download is done.
+- **Optional download settings.** Pick the video quality (down to 480p) and the audio format (MP3, Opus) once; the tiles keep working with two taps.
 - **Installable on Android**, with a share target: share a link from the YouTube app straight to your instance.
 - **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once (into a trash, restorable for a few days), clears the whole history with or without files.
 - **Report problems** straight from a failed download: opens a prefilled GitHub issue.

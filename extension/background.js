@@ -78,7 +78,8 @@ async function send(url, kind) {
     await extPost('/ext/upload-cookies', form);
   }
 
-  const body = Object.assign({ url }, PAYLOADS[kind] || PAYLOADS.video);
+  const { prefs } = await browser.storage.local.get('prefs');
+  const body = Object.assign({ url }, buildPayload(kind, prefs));
   if (kind === 'captions') body.subtitle_language = await detectLang(url);
   checkAddResult(await extPost('/ext/add', body));
   return { n: cookies.length, lang: body.subtitle_language };

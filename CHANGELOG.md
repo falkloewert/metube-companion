@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Optional download settings: video quality (Best, 1080p, 720p, 480p) and audio format (M4A, MP3, Opus), in a collapsible section of the web UI and on the extension's settings page; the tiles stay two taps (#14).
 - Trash: deleting a video (and "Clear all" with files) moves its files to the hidden folder `.trash` instead of deleting them; the Trash section of the web UI lists them with "Restore" and "Empty trash". New `TRASH_DAYS` (default 7, `0` = delete right away) purges the trash automatically (#12).
 - Web UI: files in the download folder without a MeTube history entry show up as cards (save, delete; request too when the YouTube ID is in the name) (#29).
 - `compose.desktop.yml` also fits a server without MeTube: `COMPANION_BIND`, `COMPANION_PORT`, `TZ` and `YTDL_UPDATE_TIME` via `.env` (#30).
