@@ -171,6 +171,7 @@ function friendlyError(msg) {
   const m = String(msg || '');
   if (/429|Too Many Requests/i.test(m)) return 'YouTube is blocking requests right now (too many). Try again later.';
   if (/cookies are no longer valid/i.test(m)) return 'The stored YouTube cookies have expired. Send once via the extension (it sends fresh ones) or remove them under "Cookies".';
+  if (/HTTP Error 403|Forbidden/i.test(m)) return 'YouTube refused the download (403). Usually temporary: tap retry.';
   if (/Sign in to confirm/i.test(m)) return 'YouTube wants a sign-in. Send cookies via the extension and try again.';
   if (/private|unavailable/i.test(m)) return 'Video is private or unavailable.';
   return m.replace(/^ERROR:\s*/i, '') || 'Error';

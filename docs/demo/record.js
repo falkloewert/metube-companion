@@ -166,6 +166,19 @@ const log = (...a) => console.log('[demo]', ...a);
     log('waited', (t1 - t0).toFixed(1), 's');
   }
   const hold = (s) => sleep(s * 1000);
+  // Wait until a format cell is green. YouTube now and then refuses a download
+  // with HTTP 403 (any format, about 1 in 15); the cell then says "retry", so
+  // tap it once, like a user would.
+  async function haveOrRetry(kind, timeout) {
+    const cell = (s) => phone.locator(`#done .fmt[data-kind=${kind}][data-state=${s}]`);
+    for (let i = 0; i < 2; i++) {
+      await phone.locator(`#done .fmt[data-kind=${kind}][data-state=have], #done .fmt[data-kind=${kind}][data-state=fail]`).first().waitFor({ timeout });
+      if (await cell('have').count()) return;
+      log(kind, 'failed, retrying');
+      await cell('fail').click();
+    }
+    await cell('have').waitFor({ timeout });
+  }
 
   // ===========================================================================
   // Scene 1: phone, text, audio, video, image
@@ -211,13 +224,13 @@ const log = (...a) => console.log('[demo]', ...a);
 
   await tap(phone.locator('#done .fmt[data-kind=audio]'), { pause: 500 });
   await shot('audio-running');
-  await sped(() => phone.locator('#done .fmt[data-kind=audio][data-state=have]').waitFor({ timeout: 120000 }), 1.4);
+  await sped(() => haveOrRetry('audio', 120000), 1.4);
   await hold(0.2);
   await tap(phone.locator('#done .fmt[data-kind=thumbnail]'), { pause: 400 });
-  await sped(() => phone.locator('#done .fmt[data-kind=thumbnail][data-state=have]').waitFor({ timeout: 60000 }), 0.8);
+  await sped(() => haveOrRetry('thumbnail', 60000), 0.8);
   await hold(0.2);
   await tap(phone.locator('#done .fmt[data-kind=video]'), { pause: 500 });
-  await sped(() => phone.locator('#done .fmt[data-kind=video][data-state=have]').waitFor({ timeout: 300000 }), 1.4);
+  await sped(() => haveOrRetry('video', 300000), 1.4);
   await cap('', 'One card.\nEvery format.', 'Video, audio, text and image, side by side.');
   await hold(2.2);
   await shot('all-green');
