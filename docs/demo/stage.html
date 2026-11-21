@@ -1,0 +1,74 @@
+<!doctype html>
+<!-- Stage for the demo video (1920x1080). The real web UI runs in the iframes;
+     record.mjs drives them and swaps captions and scenes. Served by record.mjs
+     at /__stage.html of the companion, so the UI frames are same-origin. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Demo stage</title>
+<style>
+  :root { --bg: #0b0e13; --text: #f2f5f9; --muted: #94a0b0; --accent: #4f8dff; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1920px; height: 1080px; overflow: hidden; background: var(--bg); color: var(--text);
+    font-family: "Liberation Sans", "Nimbus Sans", Helvetica, Arial, sans-serif; }
+  .scene { position: absolute; inset: 0; opacity: 0; transition: opacity .45s ease; pointer-events: none; }
+  .scene.on { opacity: 1; }
+  .scene.on #phoneWrap, .scene.on #deskWrap { pointer-events: auto; }
+  body.cut .scene { opacity: 0 !important; transition: none; }
+  body { background: radial-gradient(1200px 800px at 25% 40%, #151c28 0%, var(--bg) 70%); }
+
+  /* Phone scene: caption left, phone right */
+  #phoneScene .cap { position: absolute; left: 280px; top: 50%; width: 780px; transform: translateY(-50%); }
+  .cap .step { font-size: 30px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--accent); margin-bottom: 22px; min-height: 36px; }
+  .cap .line { white-space: pre-line; font-size: 88px; font-weight: 700; line-height: 1.08; letter-spacing: -.02em; transition: opacity .3s ease, transform .3s ease; }
+  .cap .sub { font-size: 38px; line-height: 1.3; color: var(--muted); margin-top: 26px; transition: opacity .3s ease; min-height: 100px; }
+  .cap.swap .line, .cap.swap .sub { opacity: 0; transform: translateY(10px); }
+  #phoneWrap { position: absolute; left: 1210px; top: 50%; width: 390px; height: 780px; transform: translateY(-50%) scale(1.3); transform-origin: 50% 50%;
+    border-radius: 34px; overflow: hidden; background: #0f1216; box-shadow: 0 0 0 6px #2a3240, 0 0 0 7px #3a4456, 0 30px 90px rgba(0,0,0,.6); }
+  #phone { width: 390px; height: 780px; border: 0; display: block; }
+
+  /* Desktop scene: UI on top, caption band below */
+  #deskScene { background: #0f1216; }
+  #deskWrap { position: absolute; left: 64px; top: 0; width: 1280px; height: 700px; transform: scale(1.4); transform-origin: 0 0; background: #0f1216; }
+  #desk { width: 1280px; height: 700px; border: 0; display: block; }
+  #deskCap { position: absolute; left: 0; right: 0; bottom: 0; height: 100px; background: #121821; border-top: 1px solid #263041;
+    display: flex; align-items: center; justify-content: center; }
+  #deskCap .line { font-size: 50px; font-weight: 700; letter-spacing: -.01em; transition: opacity .3s ease; }
+  #deskCap.swap .line { opacity: 0; }
+
+  /* End card */
+  #endScene { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 30px; }
+  #endScene .logo { width: 150px; height: 150px; margin-bottom: 10px; }
+  #endScene h1 { margin: 0; font-size: 120px; letter-spacing: -.02em; }
+  #endScene .pitch { font-size: 50px; color: #cdd5e0; max-width: 1400px; line-height: 1.25; }
+  #endScene .url { font-size: 52px; font-weight: 700; color: var(--accent); margin-top: 20px; }
+
+  /* Cursor / tap indicator */
+  #cur { position: absolute; left: 0; top: 0; width: 34px; height: 34px; margin: -17px 0 0 -17px; border-radius: 50%;
+    background: rgba(255,255,255,.55); border: 3px solid rgba(255,255,255,.95); box-shadow: 0 2px 10px rgba(0,0,0,.5);
+    z-index: 10; pointer-events: none; opacity: 0; transition: opacity .25s ease, transform .15s ease; }
+  #cur.show { opacity: 1; }
+  #cur.down { transform: scale(.7); background: rgba(79,141,255,.75); }
+</style>
+</head>
+<body>
+  <div id="phoneScene" class="scene">
+    <div class="cap" id="cap"><div class="step"></div><div class="line"></div><div class="sub"></div></div>
+    <div id="phoneWrap"><iframe id="phone" title="phone"></iframe></div>
+  </div>
+
+  <div id="deskScene" class="scene">
+    <div id="deskWrap"><iframe id="desk" title="desktop"></iframe></div>
+    <div id="deskCap"><div class="line"></div></div>
+  </div>
+
+  <div id="endScene" class="scene">
+    <svg class="logo" viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="#0b6bcb"/><path d="M24 13v16" stroke="#fff" stroke-width="4" stroke-linecap="round"/><path d="M17 23l7 7 7-7" fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 35h20" stroke="#fff" stroke-width="4" stroke-linecap="round"/></svg>
+    <h1>MeTube Companion</h1>
+    <div class="pitch">A friendlier front end for MeTube:<br>video, audio, transcript, one tap.</div>
+    <div class="url">github.com/falkloewert/metube-companion</div>
+  </div>
+
+  <div id="cur"></div>
+</body>
+</html>

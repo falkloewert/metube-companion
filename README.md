@@ -6,6 +6,8 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 
 <p align="center"><img src="docs/demo.gif" alt="Text preview, saving as Markdown, requesting a thumbnail with progress in the cell, delete confirmation" width="380"></p>
 
+<p align="center"><a href="docs/demo.mp4">Watch the 57 s demo (MP4, 1.7 MB)</a></p>
+
 ## What it does
 
 - **One link, four formats.** Paste a link and pick Video, Audio or Text (transcript); the thumbnail is one tap away on the video's card. Tap once to select, tap again to send.
