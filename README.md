@@ -59,6 +59,10 @@ Mount the MeTube download folder at `/downloads`. The container listens on port 
 
 **Is there a trash?** Not yet ([#12](../../issues/12)). Deleting removes all formats of a video for good.
 
+**Push notification on the phone when a download is done?** MeTube can do that itself: yt-dlp runs a command after each finished file. Add to MeTube's environment (merge with an existing `YTDL_OPTIONS`), with your own [ntfy](https://ntfy.sh) topic or any webhook:
+`YTDL_OPTIONS: '{"postprocessors":[{"key":"Exec","exec_cmd":"curl -s -d %(title)q https://ntfy.sh/YOUR_TOPIC","when":"after_move"}]}'`
+It fires for video and audio downloads, not for text or image only. The browser extension notifies on its own.
+
 **Does it work with sites other than YouTube?** Downloading works for every site yt-dlp supports. Previews, grouping by ID and language detection are YouTube-only for now ([#16](../../issues/16)).
 
 More in the troubleshooting table of [INSTALL.md](INSTALL.md#6-troubleshooting).
