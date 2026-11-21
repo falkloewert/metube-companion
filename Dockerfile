@@ -5,6 +5,7 @@ ENV METUBE_URL=http://metube:8081 \
     RETENTION_DAYS=0 \
     TRASH_DAYS=7 \
     COMPANION_TOKEN= \
+    YOUTUBE_WATCH_URL=https://www.youtube.com/watch?v= \
     NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     NGINX_ENTRYPOINT_QUIET_LOGS=1
 

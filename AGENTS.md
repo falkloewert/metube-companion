@@ -28,6 +28,23 @@ Not a stable API; re-check after MeTube updates.
 - Every UI action must stay understandable for a first-time user: a verb in each format cell, only destructive actions ask for confirmation.
 - Keep `COMPANION_VERSION` in `web/shared.js` and both extension manifests in sync on release.
 
+## Factory sandbox (offline, no YouTube)
+
+`docker-compose.factory.yml` runs the companion built from this checkout next to a mock MeTube (`factory/mocks/metube/server.mjs`, plain Node, no dependencies). The mock speaks MeTube's HTTP API (recorded from a real instance), simulates the noisy status sequence and writes small fixture files into a sandbox volume. nginx's `/yt/<id>` goes to the mock's watch page via `YOUTUBE_WATCH_URL` (production default unchanged). Only loopback ports, no secrets.
+
+```sh
+docker compose -f docker-compose.factory.yml up -d --build --wait
+factory/smoke.sh                                   # endpoints, file rules, language, download, failures
+docker compose -f docker-compose.factory.yml down -v
+```
+
+- UI: http://127.0.0.1:18480, mock inspector (requests the companion sent): http://127.0.0.1:18481.
+- Test hooks on the mock: `POST /_mock/reset` (history, cookies and downloads back to the seed), `GET|DELETE /_mock/events`.
+- Fixture videos (`CATALOG` in the mock): seeded Big Buck Bunny (video + image) and Me at the zoo (text); `eRsGyueVLvQ` Sintel; `deMockVid01` German; `flaky403Vid` fails once with 403 (auto-retry); any other ID fails as unavailable.
+- Parallel runs: `COMPOSE_PROJECT_NAME`, `FACTORY_WEB_PORT`, `FACTORY_MOCK_PORT`. Slower or faster simulated downloads: `FACTORY_MOCK_TICK_MS` (default 250).
+- Not mocked: card thumbnails load from `i.ytimg.com` in the browser; browser tests should route them to `factory/mocks/metube/fixtures/thumbnail.jpg`.
+- `tests/smoke.sh` stays the end-to-end check against a real MeTube and YouTube.
+
 ## Check before committing
 
 ```sh
