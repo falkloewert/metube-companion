@@ -1,4 +1,4 @@
-// Run: node --test tests/
+// Run: node --test (or node --test tests/i18n.test.mjs)
 // shared.js and web/i18n/*.js are browser scripts (no modules): they run in a
 // node:vm context with a fake window/navigator.
 import { test } from 'node:test';

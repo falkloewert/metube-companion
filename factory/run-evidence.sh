@@ -103,6 +103,15 @@ elif [[ -z "${COMPOSE_PROJECT_NAME:-}" ]]; then
   export COMPOSE_PROJECT_NAME="metube-companion-evidence-$$-${RAND_SUFFIX}"
   CLEANUP_RMI_LOCAL="true"
 fi
+# An inherited name wins over "name:" in the compose file; never let it point
+# at a real install (e.g. "metube-companion"), whose MeTube "up"/"down" would hit.
+case "$COMPOSE_PROJECT_NAME" in
+  metube-companion-evidence-*|metube-companion-factory*) ;;
+  *)
+    echo "[evidence] Error: COMPOSE_PROJECT_NAME '$COMPOSE_PROJECT_NAME' must start with metube-companion-evidence- or metube-companion-factory" >&2
+    exit 2
+    ;;
+esac
 export FACTORY_WEB_PORT="${FACTORY_WEB_PORT:-0}"
 export FACTORY_MOCK_PORT="${FACTORY_MOCK_PORT:-0}"
 # Slower simulated downloads than the default 250 ms, so the progress is readable in the proof video.
