@@ -37,18 +37,9 @@
       </div>
 
       <div class="tiles" id="tiles" role="group" aria-label="What to download">
-        <button type="button" class="tile" data-kind="video" aria-label="Download video">
-          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/></svg>
-          <span class="name">Video</span>
-        </button>
-        <button type="button" class="tile" data-kind="audio" aria-label="Download audio">
-          <svg class="ico" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
-          <span class="name">Audio</span>
-        </button>
-        <button type="button" class="tile" data-kind="captions" aria-label="Download text">
-          <svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h11M4 18h7"/></svg>
-          <span class="name">Text</span>
-        </button>
+        <button type="button" class="tile" data-kind="video" aria-label="Download video"><span class="name">Video</span></button>
+        <button type="button" class="tile" data-kind="audio" aria-label="Download audio"><span class="name">Audio</span></button>
+        <button type="button" class="tile" data-kind="captions" aria-label="Download text"><span class="name">Text</span></button>
       </div>
 
       <p id="status" class="status" role="status" aria-live="polite"></p>
@@ -80,11 +71,11 @@
       <summary>Cookies</summary>
       <p class="explain">Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.</p>
       <div class="row">
-        <label class="btn ghost file">
+        <label class="btn file">
           <span>Choose file</span>
           <input id="cookie-file" type="file" accept=".txt,text/plain">
         </label>
-        <button type="button" class="btn ghost" id="cookie-delete" hidden>Remove</button>
+        <button type="button" class="btn" id="cookie-delete" hidden>Remove</button>
       </div>
       <p id="cookie-status" class="explain" role="status" aria-live="polite"></p>
     </details>
@@ -93,9 +84,9 @@
       <summary>Extension and help</summary>
       <p class="explain">The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.</p>
       <div class="row">
-        <a class="btn ghost" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-chromium.zip">Chromium extension</a>
-        <a class="btn ghost" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-firefox.xpi">Firefox extension</a>
-        <a class="btn ghost" href="https://github.com/falkloewert/metube-companion/issues/new" target="_blank" rel="noopener">Report a problem</a>
+        <a class="btn" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-chromium.zip">Chromium extension</a>
+        <a class="btn" href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-firefox.xpi">Firefox extension</a>
+        <a class="btn" href="https://github.com/falkloewert/metube-companion/issues/new" target="_blank" rel="noopener">Report a problem</a>
       </div>
     </details>
   </main>

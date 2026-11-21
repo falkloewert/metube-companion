@@ -33,6 +33,7 @@
   ],
   "background": {
     "scripts": [
+      "compat.js",
       "shared.js",
       "background.js"
     ],

@@ -78,7 +78,7 @@ const post = (path, body) => api(path, {
 async function detectLang(url) {
   try {
     const id = ytId(url);
-    if (!id || !/^[\w-]{11}$/.test(id)) return 'de';
+    if (!id) return 'de';
     const res = await fetch('/yt/' + id);
     return res.ok ? langFromWatchPage(await res.text()) : 'de';
   } catch (_) {
@@ -89,9 +89,7 @@ async function detectLang(url) {
 async function add(url, kind) {
   const body = Object.assign({ url }, PAYLOADS[kind] || PAYLOADS.video);
   if (kind === 'captions') body.subtitle_language = await detectLang(url);
-  const res = await post('/add', body);
-  if (res && res.status === 'error') throw new Error(res.msg || 'MeTube rejected the request.');
-  if (res && /already/i.test(res.msg || '')) throw new Error('Already running.');
+  checkAddResult(await post('/add', body));
   return body.subtitle_language;
 }
 
@@ -108,9 +106,22 @@ function syncUrlBtn() {
   urlBtn.title = empty ? 'Paste' : 'Clear';
   urlBtn.setAttribute('aria-label', urlBtn.title);
 }
+
+const tileCtl = initTiles({
+  tiles: el.tiles,
+  urlInput: el.url,
+  statusEl: el.status,
+  setStatus,
+  onSend: async (url, kind) => {
+    const lang = await add(url, kind);
+    return { status: lang ? 'Sent, text in ' + (lang === 'en' ? 'English' : 'German') + '.' : 'Sent.' };
+  },
+  onSent: () => { syncUrlBtn(); refresh(); },
+});
+
 el.url.addEventListener('input', syncUrlBtn);
 urlBtn.addEventListener('click', async () => {
-  if (el.url.value) { el.url.value = ''; disarm(); syncUrlBtn(); el.url.focus(); return; }
+  if (el.url.value) { el.url.value = ''; tileCtl.disarm(); syncUrlBtn(); el.url.focus(); return; }
   try {
     el.url.value = (await navigator.clipboard.readText()).trim();
     syncUrlBtn();
@@ -121,115 +132,14 @@ urlBtn.addEventListener('click', async () => {
   }
 });
 
-// ---- Tiles -----------------------------------------------------------------
-
-el.tiles.querySelectorAll('.tile').forEach((t) => {
-  t.insertAdjacentHTML('afterbegin', SPIN + CHECK('check'));
-  t.insertAdjacentHTML('beforeend',
-    '<span class="ask">tap again</span><span class="busytxt">sending …</span><span class="donetxt">sent</span>');
-});
-
-let armed = null;
-let armTimer = null;
-let sending = false;
-
-const tile = (kind) => el.tiles.querySelector('[data-kind="' + kind + '"]');
-
-function disarm() {
-  clearTimeout(armTimer);
-  if (armed && el.status.textContent.endsWith('again to start.')) setStatus('');
-  armed = null;
-  el.tiles.classList.remove('armed');
-  el.tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
-}
-
-function arm(kind) {
-  disarm();
-  armed = kind;
-  el.tiles.classList.add('armed');
-  tile(kind).classList.add('armed');
-  armTimer = setTimeout(disarm, 4000);
-}
-
-function burst(t) {
-  for (let i = 0; i < 12; i++) {
-    const s = document.createElement('span');
-    const size = 3 + Math.random() * 3;
-    s.className = 'burst';
-    s.style.width = s.style.height = size + 'px';
-    s.style.setProperty('--a', (i * 30 + (Math.random() * 20 - 10)) + 'deg');
-    s.style.setProperty('--d', -(26 + Math.random() * 16) + 'px');
-    t.appendChild(s);
-  }
-  setTimeout(() => t.querySelectorAll('.burst').forEach((s) => s.remove()), 700);
-}
-
-function shakeUrl(msg) {
-  el.url.classList.remove('shake');
-  void el.url.offsetWidth;
-  el.url.classList.add('shake');
-  el.url.focus();
-  setStatus(msg, true);
-}
-
-el.tiles.addEventListener('click', (e) => {
-  const t = e.target.closest('.tile');
-  if (!t || sending) return;
-  const url = el.url.value.trim();
-  if (!url) { shakeUrl('Paste a link first.'); return; }
-  if (!isWebUrl(url)) { shakeUrl('That does not look like a link.'); return; }
-  if (armed !== t.dataset.kind) {
-    arm(t.dataset.kind);
-    setStatus('Tap "' + t.querySelector('.name').textContent + '" again to start.');
-    return;
-  }
-  send(canonical(url), t.dataset.kind, t);
-});
-
-document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && armed) disarm(); });
 // Enter in the field acts like a tap: selects Video, a second Enter sends.
 el.url.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
-  tile(armed || 'video').click();
+  tileCtl.click();
 });
-document.addEventListener('click', (e) => { if (armed && !e.target.closest('.tile')) disarm(); });
-
-async function send(url, kind, t) {
-  disarm();
-  sending = true;
-  el.tiles.classList.add('sending');
-  t.classList.add('busy');
-  setStatus(kind === 'captions' ? 'Detecting language …' : 'Sending …');
-  try {
-    const lang = await add(url, kind);
-    t.classList.remove('busy');
-    t.classList.add('done');
-    burst(t);
-    setStatus(lang ? 'Sent, text in ' + (lang === 'en' ? 'English' : 'German') + '.' : 'Sent.');
-    el.url.value = '';
-    syncUrlBtn();
-    refresh();
-    setTimeout(() => { t.classList.remove('done'); el.tiles.classList.remove('sending'); sending = false; }, 1300);
-  } catch (e) {
-    t.classList.remove('busy');
-    t.classList.add('fail');
-    setStatus(e.message || 'That did not work.', true);
-    setTimeout(() => { t.classList.remove('fail'); el.tiles.classList.remove('sending'); sending = false; }, 600);
-  }
-}
 
 // ---- Display helpers ---------------------------------------------------------
-
-function metaFor(item, kind) {
-  switch (item.status) {
-    case 'error': return friendlyError(item.msg || item.error);
-    case 'finished':
-      if (!item.filename) return kind === 'captions' ? 'no text found' : 'no file';
-      return 'done';
-    default: return item.msg || item.status || '';
-  }
-}
 
 function itemTitle(item) {
   const t = (item.title || '').trim();
@@ -238,16 +148,7 @@ function itemTitle(item) {
   catch (_) { return item.url; }
 }
 
-function downloadUrl(filename) {
-  return API + '/download/' + relPath(filename).split('/').map(encodeURIComponent).join('/');
-}
-
-function flash(btn) {
-  btn.classList.remove('flash');
-  void btn.offsetWidth;
-  btn.classList.add('flash');
-  setTimeout(() => btn.classList.remove('flash'), 900);
-}
+const downloadUrl = (filename) => API + '/download/' + encPath(relPath(filename));
 
 // ---- Formats per video -----------------------------------------------------
 // MeTube remembers only the last job per URL. Which formats already exist on
@@ -285,7 +186,7 @@ async function loadListings(done) {
   listingsAt = Date.now();
   await Promise.all([...dirs].map(async (dir) => {
     try {
-      const res = await fetch('/files/' + (dir ? dir.split('/').map(encodeURIComponent).join('/') + '/' : ''),
+      const res = await fetch('/files/' + (dir ? encPath(dir) + '/' : ''),
         { signal: AbortSignal.timeout(5000) });
       // The cleanup removes empty folders; then the old list no longer applies.
       if (res.status === 404) { listings.delete(dir); return; }
@@ -307,6 +208,14 @@ function siblingsOf(item) {
     base = stems[item.url] || null;
   }
   return siblings(item, listings, base);
+}
+
+// MeTube deletes only the last job's file; nginx removes the other formats
+// of the same video (DELETE /files/...). 404 = already gone.
+function deleteFiles(paths) {
+  return Promise.all([...new Set(paths)].map((rel) =>
+    fetch('/files/' + encPath(rel), { method: 'DELETE' })
+      .then((r) => r.ok || r.status === 404, () => false)));
 }
 
 // "today · 30 days left": the cleanup deletes each file separately after
@@ -360,10 +269,9 @@ function copyFallback(text) {
 }
 
 function saveMd(item, text) {
-  const title = itemTitle(item) || 'Transcript';
-  const md = '# ' + title + '\n\nSource: ' + (item.url || '') + '\n\n' + text + '\n';
-  const href = URL.createObjectURL(new Blob([md], { type: 'text/markdown' }));
-  saveFile(href, (title.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 120) || 'Transcript') + '.md');
+  const { blob, filename } = transcriptMd(itemTitle(item), item.url, text);
+  const href = URL.createObjectURL(blob);
+  saveFile(href, filename);
   setTimeout(() => URL.revokeObjectURL(href), 1000);
 }
 
@@ -385,7 +293,7 @@ function button(cls, title, icon, tag) {
   b.className = 'act ' + cls;
   b.title = title;
   b.setAttribute('aria-label', title);
-  b.innerHTML = icon + CHECK('tick');
+  b.innerHTML = icon;
   return b;
 }
 
@@ -400,17 +308,7 @@ function makeNode() {
     '<button type="button" class="pill copy">' + ICON.copy + CHECK('tick') + 'Copy all</button>' +
     '<button type="button" class="pill md">' + ICON.md + CHECK('tick') + 'As .md</button></div></div>';
   const formats = li.querySelector('.formats');
-  const cells = {};
-  for (const f of FORMATS) {
-    const c = document.createElement('button');
-    c.type = 'button';
-    c.className = 'fmt';
-    c.dataset.kind = f.kind;
-    c.innerHTML = ICON[f.kind] + SPIN + CHECK('tick') +
-      '<span class="lbl">' + f.label + '</span><span class="verb"></span>';
-    formats.appendChild(c);
-    cells[f.kind] = c;
-  }
+  const cells = makeFormatCells(formats);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
@@ -426,11 +324,31 @@ function makeNode() {
   li.appendChild(actions);
 
   const panel = li.querySelector('.textpanel');
-  const n = { li, b, cells, actions, panel, item: null, where: null, all: [], files: {}, text: null, delTimer: null };
+  const n = { li, b, cells, panel, item: null, where: null, files: {}, text: null, delTimer: null };
 
   formats.addEventListener('click', (e) => {
     const c = e.target.closest('.fmt');
-    if (c) onFormat(n, c);
+    if (c) {
+      handleFormatClick(c, {
+        item: n.item,
+        files: n.files,
+        onToggleText: () => toggleTextPanel(n.panel, n.cells.captions, n.panel.hidden, () => textOf(n)),
+        onSave: (rel) => saveFile(downloadUrl(rel), splitPath(rel)[1]),
+        onCancel: async (url) => {
+          const res = await post('/delete', { ids: [url], where: 'queue' });
+          if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+        },
+        onRetry: async (url) => {
+          // Errors go through MeTube's /retry: keeps the options (language, preset).
+          const res = await post('/retry', { id: url });
+          if (res && res.status === 'error') throw new Error(res.msg || 'Retry failed.');
+          await post('/delete', { ids: [url], where: 'done' });
+        },
+        onRequest: add,
+        notify: toast,
+        onAfter: refresh,
+      });
+    }
   });
 
   const copy = panel.querySelector('.copy');
@@ -445,7 +363,7 @@ function makeNode() {
       }
       flash(copy);
       toast('Text copied.');
-    } catch (e) {
+    } catch (_) {
       // Browsers only allow the clipboard over HTTPS or localhost.
       if (copyFallback(await textOf(n).catch(() => ''))) { flash(copy); toast('Text copied.'); return; }
       toast(window.isSecureContext ? 'Copy did not work, use .md instead.' : 'Copying needs HTTPS here, use .md instead.', true);
@@ -474,16 +392,11 @@ function makeNode() {
     try {
       const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: true });
       if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
-      // MeTube deletes only the last job's file; nginx removes the other
-      // formats of the same video (DELETE /files/...). 404 = already gone.
       if (n.where === 'done') {
         // Fresh list, so a format that just finished is included.
         listingsAt = 0;
         await loadListings([n.item]);
-        const all = siblingsOf(n.item);
-        const gone = await Promise.all(all.map((rel) =>
-          fetch('/files/' + rel.split('/').map(encodeURIComponent).join('/'), { method: 'DELETE' })
-            .then((r) => r.ok || r.status === 404, () => false)));
+        const gone = await deleteFiles(siblingsOf(n.item));
         delete stems[n.item.url];
         saveStems();
         listingsAt = 0;
@@ -513,90 +426,6 @@ function textOf(n) {
   return n.text.promise;
 }
 
-function setVerb(c, label, verb) {
-  c.querySelector('.verb').textContent = verb;
-  c.title = verb === 'waiting' ? label + ': only when the running job is done' : label + ' ' + verb;
-  c.setAttribute('aria-label', c.title);
-}
-
-function toggleText(n, open) {
-  const c = n.cells.captions;
-  n.panel.hidden = !open;
-  c.classList.toggle('open', open);
-  c.setAttribute('aria-expanded', String(open));
-  if (c.dataset.state === 'have') setVerb(c, 'Text', open ? 'hide' : 'show');
-  if (!open) return;
-  const preview = n.panel.querySelector('.preview');
-  const head = n.panel.querySelector('.tp-head');
-  head.textContent = 'Preview';
-  preview.textContent = 'Loading text …';
-  preview.classList.add('loading');
-  textOf(n).then((t) => {
-    preview.textContent = t || 'The text is empty.';
-    const words = t ? t.split(' ').length : 0;
-    head.textContent = 'Preview · ' + words.toLocaleString() + ' words';
-  },
-    (e) => { preview.textContent = 'Could not load text: ' + e.message; })
-    .finally(() => preview.classList.remove('loading'));
-}
-
-// A tap does what the cell says: save, show text, request, retry. Requesting
-// does not ask first; a running format is cancelled by tapping its cell twice.
-async function onFormat(n, c) {
-  const kind = c.dataset.kind;
-  const state = c.dataset.state;
-  if (state === 'blocked' || c.dataset.inflight === '1') return;
-  if (state === 'busy') {
-    if (!c.classList.contains('cancel')) {
-      c.classList.add('cancel');
-      setVerb(c, c.querySelector('.lbl').textContent, 'tap to cancel');
-      setTimeout(() => c.classList.remove('cancel'), 4000);
-      return;
-    }
-    c.classList.remove('cancel');
-    try {
-      const res = await post('/delete', { ids: [n.item.url], where: 'queue' });
-      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
-      toast('Cancelled.');
-    } catch (e) {
-      toast('Cancel did not work: ' + e.message, true);
-    }
-    refresh();
-    return;
-  }
-  if (state === 'have') {
-    if (kind === 'captions') { toggleText(n, n.panel.hidden); return; }
-    saveFile(downloadUrl(n.files[kind]), splitPath(n.files[kind])[1]);
-    flash(c);
-    return;
-  }
-  c.dataset.state = 'busy';
-  c.dataset.inflight = '1';
-  c.classList.add('wait');
-  setVerb(c, c.querySelector('.lbl').textContent, 'starting …');
-  try {
-    const { url } = n.item;
-    if (state === 'fail' && n.item.status === 'error') {
-      // Errors go through MeTube's /retry: keeps the options (language, preset).
-      const res = await post('/retry', { id: url });
-      if (res && res.status === 'error') throw new Error(res.msg || 'Retry failed.');
-      await post('/delete', { ids: [url], where: 'done' });
-    } else {
-      await add(url, kind);
-    }
-    c.dataset.sent = Date.now();
-    toast((FORMATS.find((f) => f.kind === kind) || {}).label + ' is loading.');
-    setTimeout(refresh, 600);
-  } catch (e) {
-    c.classList.remove('wait');
-    c.dataset.state = state;
-    setVerb(c, c.querySelector('.lbl').textContent, VERBS[state]);
-    toast(e.message || 'That did not work.', true);
-  } finally {
-    delete c.dataset.inflight;
-  }
-}
-
 document.addEventListener('click', (e) => {
   if (e.target.closest('.act.del')) return;
   document.querySelectorAll('.act.del.armed').forEach((x) => x.classList.remove('armed'));
@@ -605,7 +434,7 @@ document.addEventListener('click', (e) => {
 function update(n, item, where) {
   const kind = item.download_type || 'video';
   const running = where === 'queue';
-  const failed = item.status === 'error' || (item.status === 'finished' && !item.filename);
+  const failed = isFailed(item);
   const finished = !running && !failed;
 
   const moved = n.where === null && where === 'done' && wasQueued.has(item.url);
@@ -613,26 +442,18 @@ function update(n, item, where) {
   n.where = where;
 
   const { li, b, cells } = n;
-  const kindEl = li.querySelector('.kind');
-  n.all = running ? [] : siblingsOf(item);
-  n.files = byKind(n.all);
+  const all = running ? [] : siblingsOf(item);
+  n.files = byKind(all);
   // Thumbnail also for a failed job as long as the video has other files;
   // with nothing at all (e.g. wrong link) the kind icon.
-  const thumb = item.status === 'error' && !n.all.length ? null : thumbFor(item.url);
-  const look = thumb || kind;
-  if (kindEl.dataset.look !== look) {
-    kindEl.dataset.look = look;
-    kindEl.classList.toggle('thumb', !!thumb);
-    kindEl.innerHTML = thumb ? '<img alt="" loading="lazy" referrerpolicy="no-referrer">' : (ICON[kind] || ICON.video);
-    if (thumb) kindEl.firstChild.src = thumb;
-  }
+  setThumb(li.querySelector('.kind'), item.url, kind, !(item.status === 'error' && !all.length), true);
   const title = li.querySelector('.title');
   title.textContent = itemTitle(item);
   const web = isWebUrl(item.url);
   if (web) title.href = item.url; else title.removeAttribute('href');
   const run = running ? progress(item, progs) : null;
-  li.querySelector('.meta').textContent = run ? run.verb :
-    (finished && ageText(n.files)) || metaFor(item, kind);
+  const fallbackMeta = failed ? failReason(item) : item.status === 'finished' ? 'done' : (item.msg || item.status || '');
+  li.querySelector('.meta').textContent = run ? run.verb : (finished && ageText(n.files)) || fallbackMeta;
   li.querySelector('.meta').title = finished && KEEP_DAYS ? 'Files are deleted automatically ' + KEEP_DAYS + ' days after download.' : '';
 
   li.classList.toggle('running', running);
@@ -644,40 +465,20 @@ function update(n, item, where) {
   // If a job runs for a video that already has a card, the cell itself shows
   // the progress (bar at the bottom, "loading 42 %") instead of a second card
   // under "Running".
-  const busy = jobs.get(item.url) || new Map();
-  for (const f of FORMATS) {
-    const c = cells[f.kind];
-    // After a tap the cell stays on "loading" until MeTube has accepted the
-    // job (takes a few seconds) and it appears in the list.
-    const pending = c.dataset.inflight === '1' || c.dataset.sent > Date.now() - 4000;
-    if (c.dataset.state === 'busy' && !busy.has(f.kind) && !n.files[f.kind] && pending) continue;
-    // MeTube accepts only one job per URL at a time.
-    const state = busy.has(f.kind) ? 'busy' : n.files[f.kind] ? 'have' : busy.size ? 'blocked' :
-      failed && kind === f.kind ? 'fail' : 'missing';
-    const was = c.dataset.state;
-    if (was !== state) {
-      c.dataset.state = state;
-      if (state === 'busy') c.dataset.sent = Date.now();
-    }
-    let verb = state === 'have' && f.kind === 'captions' ? (n.panel.hidden ? 'show' : 'hide') : VERBS[state];
-    const job = busy.get(f.kind);
-    const run = job ? progress(job, progs) : null;
-    c.classList.toggle('wait', !!run && run.pct === null);
-    c.style.setProperty('--p', (run && run.pct !== null ? Math.max(4, run.pct) : 0) + '%');
-    if (run) verb = run.verb;
-    if (!c.classList.contains('cancel') && c.querySelector('.verb').textContent !== verb) setVerb(c, f.label, verb);
-    if (was === 'busy' && state === 'have') {
-      c.classList.remove('wait');
-      c.classList.add('finishing');
-      setTimeout(() => { c.classList.remove('finishing'); flash(c); }, 450);
-      if (document.hidden) { unseen += 1; document.title = '(' + unseen + ') ' + TITLE; }
-    }
-  }
+  updateFormatCells(cells, {
+    busy: jobs.get(item.url) || new Map(),
+    files: n.files,
+    failed,
+    itemKind: kind,
+    panelHidden: n.panel.hidden,
+    progs,
+    onDone: () => { if (document.hidden) { unseen += 1; document.title = '(' + unseen + ') ' + TITLE; } },
+  });
 
   if (web) b.open.href = item.url;
   if (failed) b.report.href = reportUrl(item, 'web');
   b.del.title = running ? 'Cancel' : 'Delete, with all formats';
-  if (!n.files.captions && !n.panel.hidden) toggleText(n, false);
+  if (!n.files.captions && !n.panel.hidden) toggleTextPanel(n.panel, cells.captions, false);
 
   const show = { report: failed, open: !running && web, del: true };
   Object.keys(show).forEach((k) => { b[k].hidden = !show[k]; });
@@ -782,9 +583,7 @@ async function clearAll(withFiles) {
     const files = withFiles ? items.flatMap((i) => siblingsOf(i)) : [];
     const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles });
     if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
-    const gone = await Promise.all([...new Set(files)].map((rel) =>
-      fetch('/files/' + rel.split('/').map(encodeURIComponent).join('/'), { method: 'DELETE' })
-        .then((r) => r.ok || r.status === 404, () => false)));
+    const gone = withFiles ? await deleteFiles(files) : [];
     items.forEach((i) => { delete stems[i.url]; });
     saveStems();
     if (gone.includes(false)) throw new Error('some files could not be deleted.');

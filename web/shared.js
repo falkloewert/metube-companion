@@ -1,9 +1,9 @@
 'use strict';
 
 // Shared by the web UI (web/app.js) and the browser extension
-// (extension/popup.js, background.js): jobs, formats, language detection,
-// progress, icons. Pure functions and constants only, no DOM, no fetch.
-// The extension gets this file at build time (extension/build.sh).
+// (extension/popup.js, background.js). Top section is pure (safe in the
+// extension service worker); the DOM helpers at the bottom are only called by
+// web/app.js and extension/popup.js. Copied into the extension by build.sh.
 
 // Bump together with the extension manifests on every release.
 const COMPANION_VERSION = '0.1.0';
@@ -63,17 +63,23 @@ const FORMATS = [
   { kind: 'captions', label: 'Text', ext: /^[\w-]+\.txt$/i },
   { kind: 'thumbnail', label: 'Image', ext: /^(jpe?g|webp|png)$/i },
 ];
+const LABEL = Object.fromEntries(FORMATS.map((f) => [f.kind, f.label]));
 
 const VERBS = { have: 'save', missing: 'request', busy: 'loading …', fail: 'retry', blocked: 'waiting' };
 
+function encPath(rel) {
+  return rel.split('/').map(encodeURIComponent).join('/');
+}
 
 function ytId(url) {
   try {
     const u = new URL(url);
-    if (/(^|\.)youtu\.be$/.test(u.hostname)) return u.pathname.slice(1) || null;
-    if (/(^|\.)youtube\.com$/.test(u.hostname)) {
-      return u.searchParams.get('v') || (u.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/) || [])[1] || null;
+    let id = null;
+    if (/(^|\.)youtu\.be$/.test(u.hostname)) id = u.pathname.slice(1).split('/')[0];
+    else if (/(^|\.)youtube\.com$/.test(u.hostname)) {
+      id = u.searchParams.get('v') || (u.pathname.match(/^\/(?:shorts|live|embed)\/([^/]+)/) || [])[1];
     }
+    return id && /^[\w-]{11}$/.test(id) ? id : null;
   } catch (_) { /* not a link */ }
   return null;
 }
@@ -92,7 +98,7 @@ function canonical(url) {
 
 function thumbFor(url) {
   const id = ytId(url);
-  return id && /^[\w-]{11}$/.test(id) ? 'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg' : null;
+  return id ? 'https://i.ytimg.com/vi/' + id + '/mqdefault.jpg' : null;
 }
 
 // Spoken language from the YouTube watch page, in this order:
@@ -116,7 +122,8 @@ function langFromWatchPage(html) {
   const asr = tracks.filter((t) => t.asr);
   if (asr.length === 1) return pick(asr[0].lang);
   const de = tracks.some((t) => !t.asr && t.lang.startsWith('de'));
-  return !de && tracks.some((t) => !t.asr && t.lang.startsWith('en')) ? 'en' : 'de';}
+  return !de && tracks.some((t) => !t.asr && t.lang.startsWith('en')) ? 'en' : 'de';
+}
 
 function friendlyError(msg) {
   const m = String(msg || '');
@@ -125,6 +132,22 @@ function friendlyError(msg) {
   if (/Sign in to confirm/i.test(m)) return 'YouTube wants a sign-in. Send cookies via the extension and try again.';
   if (/private|unavailable/i.test(m)) return 'Video is private or unavailable.';
   return m.replace(/^ERROR:\s*/i, '') || 'Error';
+}
+
+function isFailed(item) {
+  return !!item && (item.status === 'error' || (item.status === 'finished' && !item.filename));
+}
+
+function failReason(item) {
+  if (item && item.status === 'finished' && !item.filename) {
+    return item.download_type === 'captions' ? 'no text found' : 'no file';
+  }
+  return friendlyError(item && (item.msg || item.error));
+}
+
+function checkAddResult(res) {
+  if (res && res.status === 'error') throw new Error(res.msg || 'MeTube rejected the request.');
+  if (res && /already/i.test(res.msg || '')) throw new Error('Already running.');
 }
 
 function relPath(filename) {
@@ -162,7 +185,7 @@ function siblings(item, listings, base) {
   // the file name. This finds the formats even without a stem (failed last
   // job, another browser without localStorage).
   const id = ytId(item.url);
-  if (id && /^[\w-]{11}$/.test(id)) {
+  if (id) {
     for (const [dir, names] of listings) {
       for (const name of names.keys()) {
         if (stem(name).endsWith('[' + id + ']') && isFormat(name)) found.add((dir ? dir + '/' : '') + name);
@@ -189,6 +212,13 @@ function cleanTranscript(raw) {
   return lines.filter((l, i) => l !== lines[i - 1]).join(' ').replace(/\s+/g, ' ');
 }
 
+function transcriptMd(title, url, text) {
+  const safe = title || 'Transcript';
+  const md = '# ' + safe + '\n\nSource: ' + (url || '') + '\n\n' + text + '\n';
+  const filename = (safe.replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 120) || 'Transcript') + '.md';
+  return { blob: new Blob([md], { type: 'text/markdown' }), filename };
+}
+
 // ---- Progress ----------------------------------------------------------------
 // MeTube reports erratically: "postprocessing" before the download, for video
 // (YouTube: video and audio streams separate) 0 to 100 % twice, then
@@ -213,4 +243,242 @@ function progress(job, progs) {
     return { pct: 100, verb: 'finishing …' };
   }
   return s.shown ? { pct: s.shown, verb: 'loading ' + Math.round(s.shown) + ' %' } : { pct: null, verb: 'starting …' };
+}
+
+// ---- Shared DOM helpers (web/app.js and extension/popup.js) ------------------
+
+function flash(btn) {
+  btn.classList.remove('flash');
+  void btn.offsetWidth;
+  btn.classList.add('flash');
+  setTimeout(() => btn.classList.remove('flash'), 900);
+}
+
+function setVerb(c, verb) {
+  const label = LABEL[c.dataset.kind];
+  c.querySelector('.verb').textContent = verb;
+  c.title = verb === 'waiting' ? label + ': only when the running job is done' : label + ' ' + verb;
+  c.setAttribute('aria-label', c.title);
+}
+
+function setThumb(el, url, kind, allowThumb, lazy) {
+  const thumb = allowThumb ? thumbFor(url) : null;
+  const look = thumb || kind;
+  if (el.dataset.look === look) return;
+  el.dataset.look = look;
+  el.classList.toggle('thumb', !!thumb);
+  el.innerHTML = thumb
+    ? '<img alt=""' + (lazy ? ' loading="lazy"' : '') + ' referrerpolicy="no-referrer">'
+    : (ICON[kind] || ICON.video);
+  if (thumb) el.firstChild.src = thumb;
+}
+
+// Two-tap tiles: first tap selects, second tap sends. Esc, outside click or 4 s cancels.
+function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
+  tiles.querySelectorAll('.tile').forEach((t) => {
+    t.insertAdjacentHTML('afterbegin', ICON[t.dataset.kind].replace('<svg', '<svg class="ico"') + SPIN + CHECK('check'));
+    t.insertAdjacentHTML('beforeend',
+      '<span class="ask">tap again</span><span class="busytxt">sending …</span><span class="donetxt">sent</span>');
+  });
+
+  let armed = null;
+  let armTimer = null;
+  let sending = false;
+  const tile = (kind) => tiles.querySelector('[data-kind="' + kind + '"]');
+
+  function disarm() {
+    clearTimeout(armTimer);
+    if (armed && statusEl.textContent.endsWith('again to start.')) setStatus('');
+    armed = null;
+    tiles.classList.remove('armed');
+    tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
+  }
+
+  function arm(kind) {
+    disarm();
+    armed = kind;
+    tiles.classList.add('armed');
+    tile(kind).classList.add('armed');
+    armTimer = setTimeout(disarm, 4000);
+  }
+
+  function burst(t) {
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement('span');
+      const size = 3 + Math.random() * 3;
+      s.className = 'burst';
+      s.style.width = s.style.height = size + 'px';
+      s.style.setProperty('--a', (i * 30 + (Math.random() * 20 - 10)) + 'deg');
+      s.style.setProperty('--d', -(24 + Math.random() * 15) + 'px');
+      t.appendChild(s);
+    }
+    setTimeout(() => t.querySelectorAll('.burst').forEach((s) => s.remove()), 700);
+  }
+
+  function shakeUrl(msg) {
+    urlInput.classList.remove('shake');
+    void urlInput.offsetWidth;
+    urlInput.classList.add('shake');
+    urlInput.focus();
+    setStatus(msg, true);
+  }
+
+  tiles.addEventListener('click', async (e) => {
+    const t = e.target.closest('.tile');
+    if (!t || sending) return;
+    const url = urlInput.value.trim();
+    if (!url) { shakeUrl('Paste a link first.'); return; }
+    if (!isWebUrl(url)) { shakeUrl('That does not look like a link.'); return; }
+    const kind = t.dataset.kind;
+    if (armed !== kind) {
+      arm(kind);
+      setStatus('Tap "' + LABEL[kind] + '" again to start.');
+      return;
+    }
+    disarm();
+    sending = true;
+    tiles.classList.add('sending');
+    t.classList.add('busy');
+    setStatus(kind === 'captions' ? 'Detecting language …' : 'Sending …');
+    try {
+      const res = await onSend(canonical(url), kind);
+      t.classList.remove('busy');
+      t.classList.add('done');
+      burst(t);
+      setStatus(res.status);
+      urlInput.value = '';
+      if (onSent) onSent(res);
+      setTimeout(() => { t.classList.remove('done'); tiles.classList.remove('sending'); sending = false; }, 1300);
+    } catch (err) {
+      t.classList.remove('busy');
+      t.classList.add('fail');
+      setStatus(err.message || 'That did not work.', true);
+      setTimeout(() => { t.classList.remove('fail'); tiles.classList.remove('sending'); sending = false; }, 600);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && armed) { e.preventDefault(); disarm(); } });
+  document.addEventListener('click', (e) => { if (armed && !e.target.closest('.tile')) disarm(); });
+
+  return { disarm, click: () => tile(armed || 'video').click() };
+}
+
+function makeFormatCells(container) {
+  const cells = {};
+  for (const f of FORMATS) {
+    const c = document.createElement('button');
+    c.type = 'button';
+    c.className = 'fmt';
+    c.dataset.kind = f.kind;
+    c.innerHTML = ICON[f.kind] + SPIN + CHECK('tick') +
+      '<span class="lbl">' + f.label + '</span><span class="verb"></span>';
+    container.appendChild(c);
+    cells[f.kind] = c;
+  }
+  return cells;
+}
+
+function updateFormatCells(cells, { busy, files, failed, itemKind, panelHidden, progs, onDone }) {
+  for (const f of FORMATS) {
+    const c = cells[f.kind];
+    // After a tap the cell stays on "loading" until MeTube has accepted the
+    // job and it appears in the list.
+    const pending = c.dataset.inflight === '1' || c.dataset.sent > Date.now() - 4000;
+    if (c.dataset.state === 'busy' && !busy.has(f.kind) && !files[f.kind] && pending) continue;
+    // MeTube accepts only one job per URL at a time.
+    const state = busy.has(f.kind) ? 'busy' : files[f.kind] ? 'have' : busy.size ? 'blocked' :
+      failed && itemKind === f.kind ? 'fail' : 'missing';
+    const was = c.dataset.state;
+    if (was !== state) {
+      c.dataset.state = state;
+      if (state === 'busy') c.dataset.sent = Date.now();
+    }
+    let verb = state === 'have' && f.kind === 'captions' ? (panelHidden ? 'show' : 'hide') : VERBS[state];
+    const job = busy.get(f.kind);
+    const run = job ? progress(job, progs) : null;
+    c.classList.toggle('wait', !!run && run.pct === null);
+    c.style.setProperty('--p', (run && run.pct !== null ? Math.max(4, run.pct) : 0) + '%');
+    if (run) verb = run.verb;
+    if (!c.classList.contains('cancel') && c.querySelector('.verb').textContent !== verb) setVerb(c, verb);
+    if (was === 'busy' && state === 'have') {
+      c.classList.remove('wait');
+      c.classList.add('finishing');
+      setTimeout(() => { c.classList.remove('finishing'); flash(c); }, 450);
+      if (onDone) onDone();
+    }
+  }
+}
+
+function toggleTextPanel(panel, cell, open, loadText) {
+  panel.hidden = !open;
+  cell.classList.toggle('open', open);
+  cell.setAttribute('aria-expanded', String(open));
+  if (cell.dataset.state === 'have') setVerb(cell, open ? 'hide' : 'show');
+  if (!open) return;
+  const preview = panel.querySelector('.preview');
+  const head = panel.querySelector('.tp-head');
+  head.textContent = 'Preview';
+  preview.textContent = 'Loading text …';
+  preview.classList.add('loading');
+  loadText().then((t) => {
+    preview.textContent = t || 'The text is empty.';
+    head.textContent = 'Preview · ' + (t ? t.split(' ').length : 0).toLocaleString() + ' words';
+  }, (e) => { preview.textContent = 'Could not load text: ' + e.message; })
+    .finally(() => preview.classList.remove('loading'));
+}
+
+// A tap does what the cell says: save, show text, request, retry. Requesting
+// does not ask first; a running format is cancelled by tapping its cell twice.
+async function handleFormatClick(c, { item, files, onToggleText, onSave, onCancel, onRetry, onRequest, notify, onAfter }) {
+  const kind = c.dataset.kind;
+  const state = c.dataset.state;
+  if (state === 'blocked' || c.dataset.inflight === '1') return;
+  if (state === 'busy') {
+    if (!c.classList.contains('cancel')) {
+      c.classList.add('cancel');
+      setVerb(c, 'tap to cancel');
+      setTimeout(() => c.classList.remove('cancel'), 4000);
+      return;
+    }
+    c.classList.remove('cancel');
+    try {
+      await onCancel(item.url);
+      notify('Cancelled.');
+    } catch (e) {
+      notify('Cancel did not work: ' + e.message, true);
+    }
+    onAfter();
+    return;
+  }
+  if (state === 'have') {
+    if (kind === 'captions') { onToggleText(); return; }
+    try {
+      await onSave(files[kind], kind);
+      flash(c);
+    } catch (e) {
+      notify('Download failed: ' + e.message, true);
+    }
+    return;
+  }
+  c.dataset.state = 'busy';
+  c.dataset.inflight = '1';
+  c.classList.add('wait');
+  setVerb(c, 'starting …');
+  try {
+    if (state === 'fail' && item.status === 'error') {
+      await onRetry(item.url);
+    } else {
+      await onRequest(item.url, kind);
+    }
+    c.dataset.sent = Date.now();
+    notify(LABEL[kind] + ' is loading.');
+    setTimeout(onAfter, 600);
+  } catch (e) {
+    c.classList.remove('wait');
+    c.dataset.state = state;
+    setVerb(c, VERBS[state]);
+    notify(e.message || 'That did not work.', true);
+  } finally {
+    delete c.dataset.inflight;
+  }
 }

@@ -1,9 +1,8 @@
 'use strict';
 
-// Desktop setup default; other instances are set here. Saving asks the browser
-// for access to that address (optional host permission) and checks that a
-// MeTube Companion answers there.
-const DEFAULT_BASE = 'http://localhost:8081';
+// Desktop setup default (DEFAULT_BASE from compat.js); other instances are set
+// here. Saving asks the browser for access to that address (optional host
+// permission) and checks that a MeTube Companion answers there.
 const base = document.getElementById('base');
 const status = document.getElementById('status');
 const token = document.getElementById('token');
@@ -22,8 +21,9 @@ document.getElementById('save').addEventListener('click', async () => {
   const value = base.value.trim().replace(/\/+$/, '');
   let origin;
   try {
-    origin = new URL(value).origin;
-    if (!/^https?:$/.test(new URL(value).protocol)) throw new Error();
+    const u = new URL(value);
+    if (!/^https?:$/.test(u.protocol)) throw new Error();
+    origin = u.origin;
   } catch (_) {
     say('Please enter a full address starting with http:// or https://.', true);
     return;

@@ -3,21 +3,12 @@
 <head>
   <meta charset="utf-8">
   <title>MeTube Companion</title>
-  <!-- Colors, tiles, format cells and text panel are shared with the web UI
-       (web/shared.css, added to the package at build time). -->
+  <!-- Base reset, colors, tiles, format cells and text panel are shared with
+       the web UI (web/shared.css, added to the package at build time). -->
   <link rel="stylesheet" href="shared.css">
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0; width: 320px; padding: 12px;
-      font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg); color: var(--text);
-    }
-    .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 12px; }
-    .sr { position: absolute; left: -9999px; }
-    svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    button { font: inherit; color: inherit; }
-    button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    body { width: 320px; padding: 12px; font-size: 14px; line-height: 1.4; }
+    .card { border-radius: 22px; padding: 12px; }
 
     #url {
       width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: 999px;
@@ -46,7 +37,6 @@
     }
     .kind svg { width: 18px; height: 18px; }
     .kind.thumb { width: 58px; }
-    .kind.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
     #job.error .kind { color: var(--bad); }
     .jobtext { min-width: 0; flex: 1; }
     #jobtitle {
@@ -74,7 +64,7 @@
 </head>
 <body>
   <div class="card">
-    <label for="url" class="sr">Link</label>
+    <label for="url" class="sr-only">Link</label>
     <input id="url" type="url" placeholder="Paste a link" autocomplete="off" spellcheck="false">
 
     <div class="tiles" id="tiles" role="group" aria-label="What to download">
@@ -107,7 +97,7 @@
   </div>
   <div class="foot">
     <a href="#" id="options"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Instance</a>
-    <a href="#" id="home" title="All downloads on the MeTube page"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>All downloads</a>
+    <a href="#" id="home" title="All downloads on the MeTube page">All downloads</a>
     <span id="ver"></span>
   </div>
   <script src="compat.js"></script>

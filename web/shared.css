@@ -1,8 +1,8 @@
 /* Shared design language of the web UI (web/) and the browser extension
-   (extension/popup.html): colors, tiles with double tap, format cells with
-   verb, text panel. Calm surfaces, blue-to-violet gradient only for active
-   things, green for done. No shadows. The extension gets this file at
-   build time (extension/build.sh). */
+   (extension/popup.html, options.html): base reset, colors, tiles with double
+   tap, format cells with verb, text panel. Calm surfaces, blue-to-violet
+   gradient only for active things, green for done. No shadows. Copied into the
+   extension at build time (extension/build.sh). */
 
 :root {
   color-scheme: light dark;
@@ -18,6 +18,20 @@
     --bad: #ff6b63; --bad-fill: #c62f28; --fill: #2563d6; --ok-ink: #4ade80; --link-ink: #7ab4ff;
   }
 }
+
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+button { font: inherit; color: inherit; }
+button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 26px; }
 
 /* Tiles: first tap selects, second tap sends. */
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
@@ -81,13 +95,12 @@
 .fmt[data-state="missing"]:hover { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .fmt[data-state="blocked"] { opacity: .45; pointer-events: none; }
 .fmt[data-state="fail"] { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
-.fmt[data-state="busy"] { color: var(--link-ink); }
+.fmt[data-state="busy"] { color: var(--link-ink); background: color-mix(in srgb, var(--link-ink) 9%, transparent); }
 .fmt[data-state="busy"].cancel { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
 .fmt[data-state="busy"] svg:not(.spin) { display: none; }
 .fmt[data-state="busy"] .spin { display: block; animation: spin .75s linear infinite; }
 /* Progress of the running format right in the cell */
 .fmt[data-state="busy"].wait::before { width: 35%; animation: slide 1.3s ease-in-out infinite; }
-.fmt[data-state="busy"] { background: color-mix(in srgb, var(--link-ink) 9%, transparent); }
 .fmt[data-state="busy"]::before, .fmt.finishing::before {
   content: ""; position: absolute; left: 0; bottom: 0; height: 6px; width: var(--p, 0%);
   background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s var(--out);
@@ -148,10 +161,10 @@
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
-  .tile.done .check path, .act.flash .tick path, .fmt.flash .tick path, .pill.flash .tick path { stroke-dashoffset: 0; }
+  .tile.done .check path, .fmt.flash .tick path, .pill.flash .tick path { stroke-dashoffset: 0; }
 }
 
-/* Narrow phones (320-360 px): keep "Thumbnail" inside its cell. */
+/* Narrow phones (320-360 px): keep labels and verbs inside their cells. */
 @media (max-width: 380px) {
   .fmt { font-size: 11px; letter-spacing: -.2px; padding: 0 2px; }
   .fmt .verb { font-size: 10px; }

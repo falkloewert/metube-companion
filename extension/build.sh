@@ -14,18 +14,15 @@ common = ['compat.js', 'background.js', 'popup.html', 'popup.js',
 # Shared with the web UI: live in ../web and go into the package.
 shared = ['shared.js', 'shared.css']
 
-with zipfile.ZipFile('dist/metube-companion-firefox.xpi', 'w', zipfile.ZIP_DEFLATED) as z:
-    z.write('manifest.json', 'manifest.json')
-    for f in common:
-        z.write(f, f)
-    for f in shared:
-        z.write('../web/' + f, f)
-
-with zipfile.ZipFile('dist/metube-companion-chromium.zip', 'w', zipfile.ZIP_DEFLATED) as z:
-    for f in common:
-        z.write(f, f)
-    for f in shared:
-        z.write('../web/' + f, f)
-    z.write('manifest.chromium.json', 'manifest.json')
+for pkg, manifest in [
+    ('dist/metube-companion-firefox.xpi', 'manifest.json'),
+    ('dist/metube-companion-chromium.zip', 'manifest.chromium.json'),
+]:
+    with zipfile.ZipFile(pkg, 'w', zipfile.ZIP_DEFLATED) as z:
+        z.write(manifest, 'manifest.json')
+        for f in common:
+            z.write(f, f)
+        for f in shared:
+            z.write('../web/' + f, f)
 PY
 echo "done: dist/metube-companion-firefox.xpi, dist/metube-companion-chromium.zip"
