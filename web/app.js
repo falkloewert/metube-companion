@@ -537,6 +537,43 @@ function place(list, wanted) {
   while (list.children.length > wanted.length) list.lastChild.remove();
 }
 
+// ---- Search and filter -------------------------------------------------------
+// Hides and shows existing cards; nodes are never recreated. Chips combine
+// with AND. The row appears only once the history is long enough to need it.
+const FILTER_MIN = 6;
+const filter = { q: '', on: new Set() };
+const filterEl = { bar: $('filters'), nomatch: $('done-nomatch') };
+
+function matches(n) {
+  if (filter.q && !itemTitle(n.item).toLowerCase().includes(filter.q)) return false;
+  for (const f of filter.on) {
+    if (f === 'failed' ? !isFailed(n.item) : !n.files[f]) return false;
+  }
+  return true;
+}
+
+function applyFilter() {
+  const active = !!filter.q || filter.on.size > 0;
+  const total = el.done.children.length;
+  filterEl.bar.hidden = total < FILTER_MIN && !active;
+  const byLi = new Map([...nodes.values()].map((n) => [n.li, n]));
+  let shown = 0;
+  for (const li of el.done.children) {
+    const n = byLi.get(li);
+    li.hidden = !!n && active && !matches(n);
+    if (!li.hidden) shown += 1;
+  }
+  filterEl.nomatch.hidden = !total || shown > 0;
+}
+
+$('q').addEventListener('input', (e) => { filter.q = e.target.value.trim().toLowerCase(); applyFilter(); });
+document.querySelectorAll('.chip').forEach((b) => b.addEventListener('click', () => {
+  const f = b.dataset.f;
+  if (!filter.on.delete(f)) filter.on.add(f);
+  b.setAttribute('aria-pressed', filter.on.has(f));
+  applyFilter();
+}));
+
 // Only one request at a time: otherwise an older response can overwrite a
 // newer one (cell turns green and falls back to "loading").
 let refreshing = null;
@@ -595,6 +632,7 @@ async function doRefresh() {
     for (const [key, n] of nodes) if (!seen.has(key)) { n.li.remove(); nodes.delete(key); }
     el.active.closest('section').hidden = fresh.length === 0;
     el.doneEmpty.hidden = el.done.children.length > 0;
+    applyFilter();
     lastDone = done;
     lastOrphans = orph;
     clear.btn.hidden = !done.length && !orph.length;
@@ -619,7 +657,7 @@ clear.btn.addEventListener('click', () => {
   const o = lastOrphans.length;
   const entries = (k) => k + (k === 1 ? ' entry' : ' entries');
   clear.q.textContent = n
-    ? 'Clear ' + entries(n) + ' from the history?' + (o ? ' "Delete files too" also deletes ' + entries(o) + ' without history.' : '')
+    ? 'Clear ' + entries(n) + ' from the history' + (filter.q || filter.on.size ? ' (filters ignored)' : '') + '?' + (o ? ' "Delete files too" also deletes ' + entries(o) + ' without history.' : '')
     : 'Delete the files of ' + entries(o) + ' without history?';
   $('clear-history').hidden = !n;
   clear.bar.hidden = false;

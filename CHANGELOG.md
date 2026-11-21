@@ -5,6 +5,7 @@
 - Web UI: files in the download folder without a MeTube history entry show up as cards (save, delete; request too when the YouTube ID is in the name) (#29).
 - `compose.desktop.yml` also fits a server without MeTube: `COMPANION_BIND`, `COMPANION_PORT`, `TZ` and `YTDL_UPDATE_TIME` via `.env` (#30).
 - README: push notifications via MeTube's own `Exec` postprocessor (#20).
+- Web UI: search and filter chips (Video, Audio, Text, Failed) above a history with more than five cards (#18).
 
 ## 0.1.0 - 2026-11-21
 

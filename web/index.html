@@ -63,7 +63,18 @@
           <button type="button" class="btn" id="clear-cancel">Cancel</button>
         </div>
       </div>
+      <div class="filters" id="filters" hidden>
+        <label class="sr-only" for="q">Search history</label>
+        <input type="search" id="q" placeholder="Search titles" autocomplete="off">
+        <div class="chips">
+          <button type="button" class="chip" data-f="video" aria-pressed="false">Video</button>
+          <button type="button" class="chip" data-f="audio" aria-pressed="false">Audio</button>
+          <button type="button" class="chip" data-f="captions" aria-pressed="false">Text</button>
+          <button type="button" class="chip" data-f="failed" aria-pressed="false">Failed</button>
+        </div>
+      </div>
       <ul id="done" class="list"></ul>
+      <p id="done-nomatch" class="empty" hidden>No matches.</p>
       <p id="done-empty" class="empty">Nothing downloaded yet. Paste a link above and tap a format twice.</p>
     </section>
 
