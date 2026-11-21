@@ -1,0 +1,357 @@
+# Level 1 Evidence PR Workflow (ported from the glass-factory kit)
+#
+# Runs factory/run-evidence.sh: offline sandbox (companion + mock MeTube), unit and smoke
+# checks, Playwright proof video, deterministic quality gate.
+#
+# Security & Reliability Architecture (2-Job Split):
+# - Job 1 (`evidence`): Executes PR code inside the isolated Level 0 Docker Compose sandbox with
+#   STRICTLY READ-ONLY permissions (`contents: read`, `persist-credentials: false`) so untrusted
+#   PR code, Dockerfiles, or npm scripts NEVER receive a repository write token.
+# - Job 2 (`publish-evidence`): Runs ONLY for same-repo PRs (and skips cancelled runs), NEVER checks
+#   out or executes PR code, downloads only the verified artifact bundle, publishes the directly
+#   playable `proof.mp4`, smooth inline `proof-preview.gif`, and full-resolution step `screenshots/*.png`
+#   to `pr-<num>/` on the dedicated `factory-evidence-previews` branch (overwriting prior runs of the
+#   same PR to prevent unbounded bloat, with shallow-safe conflict retry), and posts a visual-first
+#   PR Evidence comment with an independent GitHub API scope cross-check.
+#
+# Security defaults:
+# - Uses `pull_request` (NOT `pull_request_target`) so untrusted fork code never accesses elevated tokens.
+# - Fork PRs still run Job 1 and upload artifacts, while safely skipping Job 2.
+# - Never auto-merges. Humans stay in full control.
+# - Tip: If your org forbids any bot branch writes, set `ENABLE_INLINE_PR_PREVIEWS: "false"` and
+#   change Job 2's `contents: write` to `contents: read`.
+
+name: Level 1 Evidence Check
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: level1-evidence-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+env:
+  ENABLE_INLINE_PR_PREVIEWS: "true"
+  PREVIEW_BRANCH: "factory-evidence-previews"
+
+jobs:
+  evidence:
+    name: Sandbox Tests, Proof Video & Quality Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout PR branch (read-only, no persisted git credentials)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Compute PR changed files for deterministic scope check
+        run: |
+          set -euo pipefail
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          git diff --no-renames --name-only "$BASE_SHA"...HEAD > /tmp/pr-changed-files.txt
+
+      - name: Run Level 0 + Level 1 Sandbox, Evidence Suite & Quality Gate
+        run: |
+          CHANGED_FILES="$(cat /tmp/pr-changed-files.txt)" ./factory/run-evidence.sh
+
+      - name: Upload Evidence Bundle (H.264 MP4, Smooth GIF, Full-Res Screenshots, Report)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: level1-evidence-pr-${{ github.event.pull_request.number }}
+          path: ./factory/artifacts/
+          retention-days: 14
+          if-no-files-found: warn
+
+  publish-evidence:
+    name: Publish Inline Previews & PR Evidence Comment
+    needs: evidence
+    if: ${{ !cancelled() && (needs.evidence.result == 'success' || needs.evidence.result == 'failure') && github.event.pull_request.head.repo.full_name == github.repository }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Download Evidence Bundle (no PR code checkout)
+        continue-on-error: true
+        uses: actions/download-artifact@v4
+        with:
+          name: level1-evidence-pr-${{ github.event.pull_request.number }}
+          path: ./downloaded-artifacts
+
+      - name: Publish playable MP4, smooth GIF & full-res screenshots to preview branch (race-safe, bounded per PR)
+        id: previews
+        if: env.ENABLE_INLINE_PR_PREVIEWS == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          MP4="./downloaded-artifacts/videos/proof.mp4"
+          GIF="./downloaded-artifacts/preview/proof-preview.gif"
+          SHOTS_DIR="./downloaded-artifacts/screenshots"
+
+          HAS_MP4=false
+          HAS_GIF=false
+          HAS_SHOTS=false
+          [[ -s "$MP4" ]] && HAS_MP4=true
+          [[ -s "$GIF" ]] && HAS_GIF=true
+          if [[ -d "$SHOTS_DIR" ]] && find "$SHOTS_DIR" -maxdepth 1 -name '*.png' -size +0c | grep -q .; then
+            HAS_SHOTS=true
+          fi
+
+          if [[ "$HAS_MP4" == "false" && "$HAS_GIF" == "false" && "$HAS_SHOTS" == "false" ]]; then
+            echo "published=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          WORK="$(mktemp -d)"
+          trap 'rm -rf "$WORK"' EXIT
+
+          REPO_URL="${{ github.server_url }}/${{ github.repository }}.git"
+          AUTH_B64="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          echo "::add-mask::${AUTH_B64}"
+          # Pass auth header via env vars instead of argv/URL so tokens never appear in .git/config or ps.
+          export GIT_CONFIG_COUNT=1
+          export GIT_CONFIG_KEY_0="http.${{ github.server_url }}/.extraheader"
+          export GIT_CONFIG_VALUE_0="AUTHORIZATION: basic ${AUTH_B64}"
+
+          # Overwrite a single pr-<num>/ folder per PR so re-runs do not accumulate stale folders.
+          REL_DIR="pr-${{ github.event.pull_request.number }}"
+          CACHE_BUST="${{ github.run_id }}-${{ github.run_attempt }}"
+
+          if git ls-remote --exit-code --heads "$REPO_URL" "$PREVIEW_BRANCH" >/dev/null 2>&1; then
+            git clone --depth 1 --branch "$PREVIEW_BRANCH" "$REPO_URL" "$WORK"
+          else
+            git init -q "$WORK"
+            git -C "$WORK" checkout -q --orphan "$PREVIEW_BRANCH"
+            git -C "$WORK" remote add origin "$REPO_URL"
+          fi
+
+          git -C "$WORK" config user.name "github-actions[bot]"
+          git -C "$WORK" config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          copy_assets() {
+            rm -rf "$WORK/$REL_DIR"
+            mkdir -p "$WORK/$REL_DIR"
+            if [[ "$HAS_MP4" == "true" ]]; then
+              cp "$MP4" "$WORK/$REL_DIR/proof.mp4"
+            fi
+            if [[ "$HAS_GIF" == "true" ]]; then
+              cp "$GIF" "$WORK/$REL_DIR/proof-preview.gif"
+            fi
+            if [[ "$HAS_SHOTS" == "true" ]]; then
+              mkdir -p "$WORK/$REL_DIR/screenshots"
+              find "$SHOTS_DIR" -maxdepth 1 -name '*.png' -size +0c -exec cp {} "$WORK/$REL_DIR/screenshots/" \;
+            fi
+          }
+
+          # Bounded retry using shallow-safe fetch + reset --hard + reapply (never rebases grafted shallow roots).
+          PUSHED=false
+          for attempt in 1 2 3; do
+            copy_assets
+            git -C "$WORK" add -A "$REL_DIR"
+            if git -C "$WORK" diff --cached --quiet; then
+              PUSHED=true
+              break
+            fi
+            git -C "$WORK" commit -q -m "chore(evidence): update visual proof for PR #${{ github.event.pull_request.number }} (run ${CACHE_BUST})"
+            if git -C "$WORK" push -q origin "HEAD:refs/heads/$PREVIEW_BRANCH"; then
+              PUSHED=true
+              break
+            fi
+            if [[ "$attempt" -lt 3 ]]; then
+              echo "[evidence] Preview push raced on attempt $attempt; fetching latest tip and reapplying..."
+              git -C "$WORK" fetch --depth 1 origin "$PREVIEW_BRANCH"
+              git -C "$WORK" reset --hard FETCH_HEAD
+            fi
+          done
+
+          if [[ "$PUSHED" != "true" ]]; then
+            echo "[evidence] Failed to push inline previews after 3 attempts" >&2
+            exit 1
+          fi
+
+          BASE_URL="${{ github.server_url }}/${{ github.repository }}/blob/${PREVIEW_BRANCH}/${REL_DIR}"
+          echo "published=true" >> "$GITHUB_OUTPUT"
+          echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
+          echo "cache_bust=${CACHE_BUST}" >> "$GITHUB_OUTPUT"
+          echo "has_mp4=${HAS_MP4}" >> "$GITHUB_OUTPUT"
+          echo "has_gif=${HAS_GIF}" >> "$GITHUB_OUTPUT"
+          echo "has_shots=${HAS_SHOTS}" >> "$GITHUB_OUTPUT"
+
+      - name: Post or Update PR Evidence Comment (with independent GitHub API scope cross-check)
+        uses: actions/github-script@v7
+        env:
+          PREVIEWS_PUBLISHED: ${{ steps.previews.outputs.published }}
+          BASE_URL: ${{ steps.previews.outputs.base_url }}
+          CACHE_BUST: ${{ steps.previews.outputs.cache_bust }}
+          HAS_MP4: ${{ steps.previews.outputs.has_mp4 }}
+          HAS_GIF: ${{ steps.previews.outputs.has_gif }}
+          HAS_SHOTS: ${{ steps.previews.outputs.has_shots }}
+          EVIDENCE_RESULT: ${{ needs.evidence.result }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- level1-evidence-report -->';
+            const reportPath = './downloaded-artifacts/EVIDENCE.md';
+            const gatePath = './downloaded-artifacts/quality-gate.json';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+
+            let reportBody = `# Level 1 Evidence Report – ${process.env.EVIDENCE_RESULT === 'success' ? 'PASS' : 'FAIL'}\n\n_No \`EVIDENCE.md\` report was produced (sandbox job status: \`${process.env.EVIDENCE_RESULT}\`). Inspect the workflow logs below._`;
+            if (fs.existsSync(reportPath)) {
+              reportBody = fs.readFileSync(reportPath, 'utf8');
+            }
+
+            // Rewrite local media paths to direct inline-renderable/playable GitHub URLs (works on private & public repos)
+            const baseUrl = process.env.BASE_URL || '';
+            const bust = process.env.CACHE_BUST ? `&v=${process.env.CACHE_BUST}` : '';
+            if (process.env.PREVIEWS_PUBLISHED === 'true' && baseUrl) {
+              if (process.env.HAS_MP4 === 'true') {
+                reportBody = reportBody.replaceAll('(videos/proof.mp4)', `(${baseUrl}/proof.mp4?raw=true${bust})`);
+              } else {
+                reportBody = reportBody.replaceAll('(videos/proof.mp4)', `(${runUrl})`);
+              }
+              if (process.env.HAS_GIF === 'true') {
+                reportBody = reportBody.replaceAll('(preview/proof-preview.gif)', `(${baseUrl}/proof-preview.gif?raw=true${bust})`);
+              } else {
+                reportBody = reportBody.replace(/!\[[^\]]*\]\(preview\/proof-preview\.gif\)\n?/g, '');
+              }
+              if (process.env.HAS_SHOTS === 'true') {
+                reportBody = reportBody.replace(
+                  /\(screenshots\/([A-Za-z0-9._-]+\.png)\)/g,
+                  (_, file) => `(${baseUrl}/screenshots/${file}?raw=true${bust})`
+                );
+              } else {
+                reportBody = reportBody.replace(/!\[[^\]]*\]\(screenshots\/[^)]+\)\n?/g, '');
+              }
+            } else {
+              reportBody = reportBody
+                .replaceAll('(videos/proof.mp4)', `(${runUrl})`)
+                .replace(/!\[[^\]]*\]\((preview|screenshots)\/[^)]+\)\n?/g, '')
+                .trim();
+            }
+
+            // Honest, compact Form & Integrity Gate summary inside <details> (explicitly distinguished from functional proof)
+            let gateSection = '<details><summary><strong>Format &amp; Integrity Gates:</strong> no <code>quality-gate.json</code> produced</summary></details>';
+            if (fs.existsSync(gatePath)) {
+              try {
+                const gate = JSON.parse(fs.readFileSync(gatePath, 'utf8'));
+                const checks = Array.isArray(gate.checks) ? gate.checks : [];
+                const passedCount = checks.filter((c) => c.ok).length;
+                const rows = checks
+                  .map((c) => {
+                    const detail = String(c.detail || '').replaceAll('|', '\\|').replace(/\r?\n/g, ' ').trim();
+                    return `| ${c.ok ? 'PASS' : 'FAIL'} | \`${c.id}\` | ${detail} |`;
+                  })
+                  .join('\n');
+                gateSection = [
+                  `<details${gate.ok ? '' : ' open'}>`,
+                  `<summary><strong>Format &amp; Integrity Gates: ${passedCount}/${checks.length} ${gate.ok ? 'PASS' : 'FAIL'}</strong> (<code>${gate.mode}</code> – checks media quality, step pacing, skip guards &amp; diff disclosure)</summary>`,
+                  '',
+                  '| Status | Gate | Detail |',
+                  '|---|---|---|',
+                  rows,
+                  '',
+                  '</details>',
+                ].join('\n');
+              } catch (err) {
+                gateSection = `<details open><summary><strong>Format &amp; Integrity Gates: FAIL</strong></summary>\n\n_Malformed \`quality-gate.json\`: ${err.message}_\n\n</details>`;
+              }
+            }
+
+            // Independent GitHub API scope cross-check (ALWAYS runs, includes renames via previous_filename)
+            const prFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+              per_page: 100,
+            });
+            const changedPaths = [...new Set(prFiles.flatMap((f) => [f.filename, f.previous_filename].filter(Boolean)))];
+            // Keep in sync with factory/evidence/scripts/scope-classifier.mjs (this job never checks out PR code).
+            const verificationRe = /(^|[\/._-])(tests?|__tests__|specs?|mocks?|evidence)([\/._-]|$)|docker-compose|run-evidence\.sh|smoke\.sh/i;
+            const sensitiveRe = /(^|\/)Dockerfile|^nginx\/|^docker\/|(^|\/)(docker-)?compose[^\/]*\.ya?ml$|^\.github\/|^factory\/|^tests\/|^extension\/manifest[^\/]*\.json$|(^|\/)\.env|secret/i;
+
+            const touchedVerification = changedPaths.filter((p) => verificationRe.test(p)).sort();
+            const touchedSensitive = changedPaths.filter((p) => sensitiveRe.test(p)).sort();
+
+            const undisclosedVerification = touchedVerification.filter((p) => !reportBody.includes(`\`${p}\``));
+            const undisclosedSensitive = touchedSensitive.filter((p) => !reportBody.includes(`\`${p}\``));
+
+            const apiAuditLines = [];
+            if (undisclosedSensitive.length > 0 || undisclosedVerification.length > 0) {
+              apiAuditLines.push('## ⚠️ Independent GitHub API Scope Discrepancy');
+              apiAuditLines.push(
+                'The following files were modified or renamed in this PR according to the GitHub API but were **not** disclosed in `EVIDENCE.md`:'
+              );
+              if (undisclosedSensitive.length > 0) {
+                apiAuditLines.push(
+                  '- **Undisclosed sensitive paths (manual security review mandatory):**',
+                  ...undisclosedSensitive.map((p) => `  - \`${p}\``)
+                );
+              }
+              if (undisclosedVerification.length > 0) {
+                apiAuditLines.push(
+                  '- **Undisclosed test / mock / sandbox files (inspect assertions carefully):**',
+                  ...undisclosedVerification.map((p) => `  - \`${p}\``)
+                );
+              }
+            } else if (!reportBody.includes('## Scope & Verification Integrity')) {
+              apiAuditLines.push('## Scope & Verification Integrity (GitHub API)');
+              apiAuditLines.push(
+                touchedVerification.length
+                  ? `- **Modified test / mock / sandbox files:** ${touchedVerification.map((p) => `\`${p}\``).join(', ')}`
+                  : '- **Test / mock / sandbox files:** Unchanged in this PR.'
+              );
+              apiAuditLines.push(
+                touchedSensitive.length
+                  ? `- **Sensitive paths touched (manual review required):** ${touchedSensitive.map((p) => `\`${p}\``).join(', ')}`
+                  : '- **Sensitive paths:** None detected.'
+              );
+            }
+
+            const body = [
+              marker,
+              reportBody.trim(),
+              '',
+              gateSection,
+              ...(apiAuditLines.length ? ['', apiAuditLines.join('\n')] : []),
+              '',
+              '---',
+              `[Workflow run & raw artifact archive](${runUrl})`,
+            ].join('\n');
+
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              per_page: 100,
+            });
+
+            const existing = comments.find(
+              (c) => c.user?.login === 'github-actions[bot]' && c.body && c.body.includes(marker)
+            );
+            if (existing) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: existing.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
