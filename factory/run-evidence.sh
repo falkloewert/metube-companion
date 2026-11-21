@@ -203,9 +203,12 @@ if find tests -name '*.test.mjs' -print -quit | grep -q .; then
   NODE_TEST_FAILS=0
   while IFS= read -r line; do
     if [[ "$line" =~ ^(ok|not\ ok)\ [0-9]+\ -\ (.+)$ ]]; then
-      tap_case "${BASH_REMATCH[1]}" "node --test: ${BASH_REMATCH[2]}"
+      # Copy first: tap_case runs its own [[ =~ ]] and overwrites BASH_REMATCH.
+      result="${BASH_REMATCH[1]}"
+      name="${BASH_REMATCH[2]}"
+      tap_case "$result" "node --test: $name"
       NODE_TEST_CASES=$((NODE_TEST_CASES + 1))
-      [[ "${BASH_REMATCH[1]}" == "ok" ]] || NODE_TEST_FAILS=$((NODE_TEST_FAILS + 1))
+      [[ "$result" == "ok" ]] || NODE_TEST_FAILS=$((NODE_TEST_FAILS + 1))
     fi
   done <<< "$TEST_OUT"
   if [[ "$NODE_TEST_CASES" -eq 0 || ( "$TEST_EXIT" -ne 0 && "$NODE_TEST_FAILS" -eq 0 ) ]]; then

@@ -74,3 +74,22 @@ test('Adding a link shows progress and ends with a saved audio cell; /add payloa
     quality: 'best',
   });
 });
+
+// #21: the UI language follows the browser's first language (real browser locale).
+for (const [locale, lang, history, save] of [
+  ['de-DE', 'de', 'Verlauf', 'speichern'],
+  ['de-AT', 'de', 'Verlauf', 'speichern'],
+  ['en-US', 'en', 'History', 'save'],
+  ['fr-FR', 'en', 'History', 'save'],
+]) {
+  test.describe(`browser locale ${locale}`, () => {
+    test.use({ locale });
+    test(`UI is ${lang} for ${locale}`, async ({ page }) => {
+      await page.goto('/');
+      await expect(page.locator('html')).toHaveAttribute('lang', lang);
+      await expect(page.locator('#done-title')).toHaveText(history);
+      const bunny = page.locator('#done .item').filter({ hasText: 'Big Buck Bunny' });
+      await expect(cell(bunny, 'video').locator('.verb')).toHaveText(save);
+    });
+  });
+}
