@@ -180,12 +180,7 @@ formats.addEventListener('click', (e) => {
       const r = await extPost('/ext/delete', { ids: [url], where: 'queue' });
       if (r && r.status === 'error') throw new Error(r.msg || 'MeTube refused.');
     },
-    onRetry: async (url) => {
-      // Errors go through MeTube's /retry: keeps the options (language, preset).
-      const r = await extPost('/ext/retry', { id: url });
-      if (r && r.status === 'error') throw new Error(r.msg || 'Retry failed.');
-      await extPost('/ext/delete', { ids: [url], where: 'done' });
-    },
+    onRetry: (url) => retryJob(url, (p, b) => extPost('/ext' + p, b)),
     onRequest: async (url, kind) => {
       const res = await browser.runtime.sendMessage({ type: 'send', url, kind });
       if (!res || !res.ok) throw new Error((res && res.message) || 'That did not work.');

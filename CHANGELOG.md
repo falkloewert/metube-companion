@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- YouTube 403 ("refused the download") is retried once automatically by the web UI and the extension; in tests about 1 in 15 downloads hit it and the retry worked.
 - Transcripts: old videos with both German and English manual captions (no automatic track) now get the uploader's language, judged from title and description; "Me at the zoo" was German before.
 - Web UI and extension: a download that YouTube refuses with HTTP 403 (intermittent, any format) says "YouTube refused the download (403). Usually temporary: tap retry." instead of the raw yt-dlp message.
 

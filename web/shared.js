@@ -167,6 +167,25 @@ function wordsLang(html) {
   return en > de ? 'en' : 'de';
 }
 
+// Errors go through MeTube's /retry: keeps the options (language, preset).
+// postJson(path, body) posts to MeTube ("/retry", "/delete").
+async function retryJob(url, postJson) {
+  const res = await postJson('/retry', { id: url });
+  if (res && res.status === 'error') throw new Error(res.msg || 'Retry failed.');
+  await postJson('/delete', { ids: [url], where: 'done' });
+}
+
+// YouTube's 403 mostly passes on the next try (about 1 in 15 downloads in
+// tests, retry worked each time): retry once per URL within 10 minutes,
+// without asking. retried: URL -> time of the last automatic retry.
+// ponytail: only while the web UI or the extension watches the job; move to
+// a server-side helper if that is not enough.
+const AUTO_RETRY_MS = 600000;
+function shouldAutoRetry(item, retried, now) {
+  return item.status === 'error' && /HTTP Error 403|Forbidden/i.test(item.msg || item.error || '') &&
+    !(retried[item.url] && now - retried[item.url] < AUTO_RETRY_MS);
+}
+
 function friendlyError(msg) {
   const m = String(msg || '');
   if (/429|Too Many Requests/i.test(m)) return 'YouTube is blocking requests right now (too many). Try again later.';

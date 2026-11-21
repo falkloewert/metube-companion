@@ -350,7 +350,8 @@ let wasQueued = new Set();
 // Jobs finished while the tab was in the background: "(2) MeTube Companion".
 const TITLE = document.title;
 let unseen = 0;
-let jobs = new Map();         // URL -> Map kind -> running job
+let jobs = new Map();
+const autoRetried = {};       // URL -> time, see shouldAutoRetry() in shared.js         // URL -> Map kind -> running job
 const progs = new Map();      // progress per URL|kind, see progress() in shared.js
 
 function button(cls, title, icon, tag) {
@@ -404,12 +405,7 @@ function makeNode() {
           const res = await post('/delete', { ids: [url], where: 'queue' });
           if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
         },
-        onRetry: async (url) => {
-          // Errors go through MeTube's /retry: keeps the options (language, preset).
-          const res = await post('/retry', { id: url });
-          if (res && res.status === 'error') throw new Error(res.msg || 'Retry failed.');
-          await post('/delete', { ids: [url], where: 'done' });
-        },
+        onRetry: (url) => retryJob(url, post),
         onRequest: add,
         notify: toast,
         onAfter: refresh,
@@ -629,6 +625,11 @@ async function doRefresh() {
     setConn(true);
     const queue = (h.queue || []).concat(h.pending || []);
     const done = (h.done || []).slice().reverse();
+    const now = Date.now();
+    done.filter((i) => shouldAutoRetry(i, autoRetried, now)).forEach((i) => {
+      autoRetried[i.url] = now;
+      retryJob(i.url, post).catch(() => { /* the card shows "retry" */ });
+    });
     const known = new Set(done.map((i) => i.url));
     const stale = Object.keys(stems).filter((url) => !known.has(url));
     stale.forEach((url) => { delete stems[url]; });

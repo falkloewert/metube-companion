@@ -209,6 +209,18 @@ async function notifyItem(item) {
   } catch (_) { /* the notification is an extra */ }
 }
 
+// True when a failed job was sent again (YouTube 403, see shouldAutoRetry);
+// then it stays pending instead of reporting the error.
+async function autoRetry(item) {
+  const { retried = {} } = await browser.storage.local.get('retried');
+  const now = Date.now();
+  if (!shouldAutoRetry(item, retried, now)) return false;
+  for (const u of Object.keys(retried)) if (now - retried[u] >= AUTO_RETRY_MS) delete retried[u];
+  retried[item.url] = now;
+  await browser.storage.local.set({ retried });
+  try { await retryJob(item.url, (p, b) => extPost('/ext' + p, b)); return true; } catch (_) { return false; }
+}
+
 async function dropPending(url) {
   const { pending = [] } = await browser.storage.local.get('pending');
   await browser.storage.local.set({ pending: pending.filter((j) => j.url !== url) });
@@ -223,6 +235,7 @@ async function watchFast(url) {
     let item;
     try { item = (await historyItems()).find((x) => x.url === url); } catch (_) { continue; }
     if (!item) continue;
+    if (item.status === 'error' && await autoRetry(item)) continue;
     if (item.status === 'finished' || item.status === 'error') {
       await dropPending(url);
       await notifyItem(item);
@@ -251,7 +264,9 @@ async function checkJobs() {
   for (const job of pending) {
     const item = all.find((i) => i.url === job.url);
     if (!item) continue;
-    if (item.status === 'finished' || item.status === 'error') {
+    if (item.status === 'error' && await autoRetry(item)) {
+      rest.push(job);
+    } else if (item.status === 'finished' || item.status === 'error') {
       await notifyItem(item);
     } else {
       rest.push(job);
