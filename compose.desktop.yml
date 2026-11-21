@@ -63,6 +63,10 @@ services:
       # Files stay until you delete them. Set e.g. 30 to clean up automatically
       # (applies to every file in the download folder).
       RETENTION_DAYS: "0"
+      # Deleted videos wait this many days in a trash (hidden folder .trash)
+      # before they are removed for good; "Restore" in the web UI brings them
+      # back. 0 = no trash, files are deleted right away (an old trash is emptied).
+      TRASH_DAYS: "7"
       # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -), useful when
       # other devices can reach this instance.
       # COMPANION_TOKEN: "change-me-to-a-long-random-string"

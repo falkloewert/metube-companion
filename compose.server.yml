@@ -49,6 +49,10 @@ services:
       # Delete files older than this many days (0 = keep forever). Applies to
       # EVERY file in the download folder, also files MeTube had before.
       RETENTION_DAYS: "0"
+      # Deleted videos wait this many days in a trash (hidden folder .trash)
+      # before they are removed for good; "Restore" in the web UI brings them
+      # back. 0 = no trash, files are deleted right away (an old trash is emptied).
+      TRASH_DAYS: "7"
       # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -). Without it,
       # everyone who can reach the companion can use it.
       # COMPANION_TOKEN: "change-me-to-a-long-random-string"

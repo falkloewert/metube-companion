@@ -183,3 +183,11 @@ a.title:hover { text-decoration: underline; }
 .login[hidden] { display: none; }
 .login p { margin: 0 0 10px; font-size: 14px; }
 .login input { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--soft); color: inherit; font: inherit; }
+
+/* Trash */
+.more[hidden], #trash-purge[hidden] { display: none; }
+#trash .list { margin-bottom: 10px; }
+.item.trashed { display: flex; align-items: center; gap: 12px; animation: none; }
+.item.trashed .btn { flex: none; min-height: 38px; }
+.empty[hidden] { display: none; }
+#trash-count { margin-left: .35em; color: var(--muted); }

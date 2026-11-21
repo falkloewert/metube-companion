@@ -78,6 +78,14 @@
       <p id="done-empty" class="empty">Nothing downloaded yet. Paste a link above and tap a format twice.</p>
     </section>
 
+    <details class="card more" id="trash" hidden>
+      <summary>Trash<span id="trash-count"></span></summary>
+      <p class="explain">Deleted videos wait here for <span id="trash-days"></span>, then they are removed for good. "Restore" puts all their files back and the video shows up in the history again.</p>
+      <ul id="trash-list" class="list"></ul>
+      <p id="trash-empty" class="empty">The trash is empty.</p>
+      <div class="row"><button type="button" class="btn danger" id="trash-purge" hidden>Empty trash</button></div>
+    </details>
+
     <details class="card more">
       <summary>Cookies</summary>
       <p class="explain">Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.</p>

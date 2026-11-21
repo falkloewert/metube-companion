@@ -158,6 +158,8 @@ const downloadUrl = (filename) => API + '/download/' + encPath(relPath(filename)
 const listings = new Map();   // folder -> Map file name -> mtime (ms)
 // Days until the cleanup deletes a file (RETENTION_DAYS, via /config.js); 0 = never.
 const KEEP_DAYS = Number((window.COMPANION || {}).keepDays) || 0;
+// Days deleted videos stay in the trash (TRASH_DAYS); 0 = deleted right away.
+const TRASH_DAYS = Number((window.COMPANION || {}).trashDays) || 0;
 let listingsAt = 0;
 let listingsSig = '';
 let lastQueueSig = '';
@@ -249,6 +251,38 @@ function deleteFiles(paths) {
     fetch('/files/' + encPath(rel), { method: 'DELETE' })
       .then((r) => r.ok || r.status === 404, () => false)));
 }
+
+// Trash: nginx moves files to /downloads/.trash/<unix time>/<same path>
+// (WebDAV MOVE on /files/). The time in the folder name is when it was moved;
+// the cleanup purges the folder after TRASH_DAYS. "Overwrite: F" makes nginx
+// refuse (412) instead of replacing an existing file.
+// 404 = already gone: fine for a move into the trash, not for a restore
+// (strict: nothing came back).
+const moveFile = (from, to, strict) => fetch('/files/' + encPath(from), {
+  method: 'MOVE', headers: { Destination: '/files/' + encPath(to), Overwrite: 'F' },
+}).then((r) => (r.ok || (r.status === 404 && !strict) ? 'ok' : r.status === 412 ? 'exists' : 'fail'), () => 'fail');
+
+// Server time, from the Date header of a /files/ answer: the trash folder name
+// must not depend on this device's clock (a wrong phone clock would purge
+// at once or never). skew = server minus browser, ms.
+let skew = 0;
+function noteServerTime(res) {
+  const t = Date.parse(res.headers.get('Date') || '');
+  if (isFinite(t)) skew = t - Date.now();
+  return isFinite(t);
+}
+const serverNow = () => Date.now() + skew;
+
+async function trashFiles(paths) {
+  const res = await fetch('/files/', { method: 'HEAD', cache: 'no-store' }).catch(() => null);
+  if (!res || !noteServerTime(res)) return [...new Set(paths)].map(() => false);
+  const stamp = Math.floor(serverNow() / 1000);
+  return Promise.all([...new Set(paths)].map((rel) => moveFile(rel, '.trash/' + stamp + '/' + rel)))
+    .then((r) => r.map((x) => x === 'ok'));
+}
+
+// Delete = into the trash, or gone for good without one (TRASH_DAYS=0).
+const removeFiles = (paths) => (TRASH_DAYS ? trashFiles(paths) : deleteFiles(paths));
 
 // "today · 30 days left": the cleanup deletes each file separately after
 // KEEP_DAYS, so the oldest file of a video disappears first.
@@ -423,30 +457,32 @@ function makeNode() {
     b.del.disabled = true;
     try {
       if (n.item.orphan) {
-        if ((await deleteFiles(n.item.orphan)).includes(false)) throw new Error('not all formats could be deleted.');
+        if ((await removeFiles(n.item.orphan)).includes(false)) throw new Error('not all formats could be deleted.');
         listingsAt = 0;
-        toast('Deleted.');
+        toast(TRASH_DAYS ? 'Moved to the trash.' : 'Deleted.');
         return;
       }
-      const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: true });
+      // With a trash MeTube only drops the history entry; the files move below.
+      const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: n.where === 'queue' || !TRASH_DAYS });
       if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
       if (n.where === 'done') {
         // Fresh list, so a format that just finished is included.
         listingsAt = 0;
         await loadListings([n.item]);
-        const gone = await deleteFiles(siblingsOf(n.item));
+        const gone = await removeFiles(siblingsOf(n.item));
         delete stems[n.item.url];
         saveStems();
         listingsAt = 0;
         if (gone.includes(false)) throw new Error('not all formats could be deleted.');
       }
-      toast(n.where === 'queue' ? 'Cancelled.' : 'Deleted.');
+      toast(n.where === 'queue' ? 'Cancelled.' : TRASH_DAYS ? 'Moved to the trash.' : 'Deleted.');
     } catch (e) {
       toast('That did not work: ' + e.message, true);
     } finally {
       b.del.disabled = false;
       b.del.classList.remove('armed');
       refresh();
+      loadTrash();
     }
   });
 
@@ -675,14 +711,14 @@ async function clearAll(withFiles) {
     await loadListings(items);
     const files = withFiles ? items.flatMap((i) => siblingsOf(i)).concat(extra) : [];
     if (items.length) {
-      const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles });
+      const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles && !TRASH_DAYS });
       if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
     }
-    const gone = withFiles ? await deleteFiles(files) : [];
+    const gone = withFiles ? await removeFiles(files) : [];
     items.forEach((i) => { delete stems[i.url]; });
     saveStems();
-    if (gone.includes(false)) throw new Error('some files could not be deleted.');
-    toast(withFiles ? 'History and files deleted.' : 'History cleared. The files stay and are still listed.');
+    if (gone.includes(false)) throw new Error('some files could not be ' + (TRASH_DAYS ? 'moved.' : 'deleted.'));
+    toast(withFiles ? (TRASH_DAYS ? (items.length ? 'History cleared, files' : 'Files') + ' moved to the trash.' : 'History and files deleted.') : 'History cleared. The files stay and are still listed.');
     clear.bar.hidden = true;
   } catch (e) {
     toast('That did not work: ' + e.message, true);
@@ -690,10 +726,133 @@ async function clearAll(withFiles) {
     buttons.forEach((x) => { x.disabled = false; });
     listingsAt = 0;
     refresh();
+    loadTrash();
   }
 }
 $('clear-files').addEventListener('click', () => clearAll(true));
 $('clear-history').addEventListener('click', () => clearAll(false));
+
+// ---- Trash -----------------------------------------------------------------
+// Lists /files/.trash/<unix time>/..., one entry per video (same grouping as
+// orphans()). Restore moves the files back; they show up as cards again
+// (with or without history, see orphans()). Not polled: loaded at start, when
+// opened and after each action.
+
+const trashEl = { box: $('trash'), count: $('trash-count'), list: $('trash-list'), empty: $('trash-empty'), btn: $('trash-purge') };
+let trashGroups = [];
+
+async function listDir(path) {
+  const res = await fetch('/files/' + path, { signal: AbortSignal.timeout(5000) });
+  noteServerTime(res);
+  if (res.status === 404) return [];
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  return res.json();
+}
+
+// All files below a trash folder: [{ rel (below the time folder), stamp }].
+async function trashFilesOf(stamp, sub) {
+  const out = [];
+  for (const f of await listDir('.trash/' + stamp + '/' + (sub ? encPath(sub) + '/' : ''))) {
+    const rel = (sub ? sub + '/' : '') + f.name;
+    if (f.type === 'directory') out.push(...await trashFilesOf(stamp, rel));
+    else if (f.type === 'file') out.push({ rel, stamp });
+  }
+  return out;
+}
+
+async function loadTrash() {
+  if (!TRASH_DAYS) return;
+  try {
+    const stamps = (await listDir('.trash/')).filter((f) => f.type === 'directory' && /^\d{9,11}$/.test(f.name));
+    const files = (await Promise.all(stamps.map((f) => trashFilesOf(f.name)))).flat();
+    const groups = new Map();
+    for (const { rel, stamp } of files) {
+      const [dir, name] = splitPath(rel);
+      const s = stem(name);
+      if (!Object.keys(byKind([rel]))[0]) continue;
+      const id = (s.match(/\[([\w-]{11})\]$/) || [])[1];
+      const key = stamp + '|' + (dir ? dir + '/' : '') + (id ? '[' + id + ']' : s);
+      if (!groups.has(key)) groups.set(key, { title: s.replace(/\s*\[[\w-]{11}\]$/, ''), stamp: Number(stamp), files: [] });
+      groups.get(key).files.push(rel);
+    }
+    trashGroups = [...groups.values()].sort((a, b) => b.stamp - a.stamp);
+    renderTrash();
+  } catch (_) { /* keep the old list */ }
+}
+
+function trashLeft(stamp) {
+  const day = 86400000;
+  const left = Math.ceil((stamp * 1000 + TRASH_DAYS * day - serverNow()) / day);
+  return left <= 1 ? 'removed for good soon' : 'removed for good in ' + left + ' days';
+}
+
+function renderTrash() {
+  trashEl.count.textContent = trashGroups.length ? '(' + trashGroups.length + ')' : '';
+  trashEl.empty.hidden = trashGroups.length > 0;
+  trashEl.btn.hidden = !trashGroups.length;
+  trashEl.list.replaceChildren(...trashGroups.map((g) => {
+    const li = document.createElement('li');
+    li.className = 'item trashed';
+    li.innerHTML = '<div class="text"><span class="title"></span><div class="meta"></div></div>' +
+      '<button type="button" class="btn">Restore</button>';
+    li.querySelector('.title').textContent = g.title;
+    const kinds = Object.keys(byKind(g.files)).map((k) => LABEL[k]).join(', ');
+    li.querySelector('.meta').textContent = kinds + ' · ' + trashLeft(g.stamp);
+    li.querySelector('button').addEventListener('click', (e) => restore(g, e.currentTarget));
+    return li;
+  }));
+}
+
+async function restore(g, button) {
+  button.disabled = true;
+  try {
+    const res = await Promise.all(g.files.map((rel) => moveFile('.trash/' + g.stamp + '/' + rel, rel, true)));
+    if (res.includes('exists')) throw new Error('a file with the same name is already in the download folder.');
+    if (res.includes('fail')) throw new Error('not all files could be restored.');
+    toast('Restored.');
+  } catch (e) {
+    toast('Restore did not work: ' + e.message, true);
+  } finally {
+    listingsAt = 0;
+    await loadTrash();
+    refresh();
+  }
+}
+
+// "Empty trash" asks first: the first tap changes the label, the second
+// deletes for good. Back to normal after 4 s.
+let purgeTimer = null;
+trashEl.btn.addEventListener('click', async () => {
+  if (!trashEl.btn.classList.contains('armed')) {
+    trashEl.btn.classList.add('armed');
+    trashEl.btn.textContent = 'Delete for good?';
+    purgeTimer = setTimeout(disarmPurge, 4000);
+    return;
+  }
+  clearTimeout(purgeTimer);
+  trashEl.btn.disabled = true;
+  try {
+    const files = trashGroups.flatMap((g) => g.files.map((rel) => '.trash/' + g.stamp + '/' + rel));
+    if ((await deleteFiles(files)).includes(false)) throw new Error('not all files could be deleted.');
+    toast('Trash emptied.');
+  } catch (e) {
+    toast('That did not work: ' + e.message, true);
+  } finally {
+    trashEl.btn.disabled = false;
+    disarmPurge();
+    loadTrash();
+  }
+});
+function disarmPurge() {
+  trashEl.btn.classList.remove('armed');
+  trashEl.btn.textContent = 'Empty trash';
+}
+
+if (TRASH_DAYS) {
+  $('trash-days').textContent = TRASH_DAYS + (TRASH_DAYS === 1 ? ' day' : ' days');
+  trashEl.box.hidden = false;
+  trashEl.box.addEventListener('toggle', () => { if (trashEl.box.open) loadTrash(); });
+}
 
 // ---- Cookies ---------------------------------------------------------------
 
@@ -756,6 +915,7 @@ takeShared();
 syncUrlBtn();
 refresh();
 cookieStatus();
+loadTrash();
 // Poll less often in the background, but keep going so the tab counter works.
 let tick = 0;
 setInterval(() => { tick += 1; if (!document.hidden || tick % 5 === 0) refresh(); }, POLL_MS);

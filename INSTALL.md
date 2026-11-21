@@ -35,7 +35,7 @@ Ask these one by one. Defaults are what the shipped compose files use.
 | 1 | **Where should it run?** | **This computer** (desktop): simplest, only reachable from this computer, downloads land on this computer, runs only while it is on. **A server or NAS**: reachable from all devices at home, keeps running, needs Docker there. | Desktop |
 | 2 | **Is MeTube already running there?** | Yes: only the companion is added (`compose.server.yml`), four MeTube settings must be added. No: use the bundled setup (`compose.desktop.yml`, also fine on a server). | No |
 | 3 | **Download folder** | Use a **dedicated folder**, not your general Downloads or a shared NAS folder: MeTube takes ownership of everything in it at start (`chown` to `PUID`/`PGID`), automatic deletion (4) and "Delete everything" act on it. | `./downloads` next to the compose file |
-| 4 | **Delete downloads automatically?** | `RETENTION_DAYS=N` deletes files older than N days, hourly. It applies to **every file in the download folder**, including files that were there before (important when adding the companion to an existing MeTube); hidden folders such as MeTube's own state (`.metube`) are skipped. `0` keeps everything until the user deletes it. **There is no trash yet**: deleted files are gone (trash is planned, [#12](https://github.com/falkloewert/metube-companion/issues/12)). | `0` (off) |
+| 4 | **Delete downloads automatically?** | `RETENTION_DAYS=N` deletes files older than N days, hourly. It applies to **every file in the download folder**, including files that were there before (important when adding the companion to an existing MeTube); hidden folders such as MeTube's own state (`.metube`) are skipped. `0` keeps everything until the user deletes it. Deleting in the UI first moves files to a trash (hidden folder `.trash` in the download folder, `TRASH_DAYS=7`, `0` = delete right away and empty an existing `.trash`); the Trash section of the web UI restores them. A restored file gets a fresh `RETENTION_DAYS` period. | `0` (off) |
 | 5 | **Who may access it?** | Desktop: only this computer (bound to `127.0.0.1`). Server: home network or VPN. Optional `COMPANION_TOKEN` (16-128 characters, A-Z a-z 0-9 . _ -): the web UI asks for it once, the extension has a field; use HTTPS with it, plain HTTP exposes it. **Never expose it to the internet** without an authenticating reverse proxy with HTTPS in front (and set the token too; the extension cannot pass a login page, so the proxy must let `/ext/` and `/files/` through without login, protected by the token). | Local only, no token |
 | 6 | **Port** | Any free port. | Desktop `8081`, server `8082` |
 | 7 | **File owner** (Linux, NAS) | The companion must run as the owner of the download folder to delete files (`id` shows uid/gid). | `1000:1000` |
@@ -89,7 +89,7 @@ Existing MeTube files without the video ID in their name still work, but are gro
 - The web UI opens and shows "Connected".
 - Paste a public YouTube link, tap **Text** twice: within a minute a card appears with *Text: show*. If it fails with a sign-in message, see decision 8.
 - On the card, tap **Image · request** (the thumbnail): the cell turns green, a `.jpg` appears in the download folder.
-- Delete the card (tap the trash twice): the files disappear from the folder.
+- Delete the card (tap the trash twice): the files move to `.trash` in the download folder (with `TRASH_DAYS=0` they are deleted). Open **Trash** and tap **Restore**: the card comes back.
 
 ## 6. Troubleshooting
 

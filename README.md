@@ -13,7 +13,7 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 - **Transcripts that just work.** Detects whether a YouTube video is spoken in English or German (including AI-dubbed videos), fetches the original caption track to dodge YouTube's 429 errors, and turns captions into clean text. Preview, copy, or save as Markdown.
 - **Browser extension** (Chromium; Firefox until it is in the add-on store only as a temporary add-on). Sends the current tab, with the cookies of that site (YouTube, Instagram, TikTok) for signed-in content, shows the same format cells, and notifies you when a download is done.
 - **Installable on Android**, with a share target: share a link from the YouTube app straight to your instance.
-- **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once, clears the whole history with or without files.
+- **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once (into a trash, restorable for a few days), clears the whole history with or without files.
 - **Report problems** straight from a failed download: opens a prefilled GitHub issue.
 
 ## Screenshots
@@ -44,6 +44,7 @@ Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube upda
 |---|---|---|
 | `METUBE_URL` | `http://metube:8081` | Where the companion reaches MeTube |
 | `RETENTION_DAYS` | `0` | Delete files in the download folder older than this many days (0 = never; hidden folders such as MeTube's `.metube` state are skipped); the UI shows the days left |
+| `TRASH_DAYS` | `7` | Deleting a video (or "Clear all" with files) moves its files to the hidden folder `.trash` and removes them for good after this many days; the web UI has a Trash section with "Restore" and "Empty trash". `0` = no trash, files are deleted right away (and an existing `.trash` is emptied). A restored file gets a fresh `RETENTION_DAYS` period (the cleanup looks at the change time too) |
 | `COMPANION_TOKEN` | empty | Optional access token. The web UI asks for it once, the extension has a field for it. Empty = no check |
 | `user:` (compose) | | Run as the owner of the downloads folder, otherwise deleting files fails |
 

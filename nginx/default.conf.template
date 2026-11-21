@@ -1,5 +1,5 @@
 # Site config, rendered at container start (envsubst): ${METUBE_UPSTREAM}
-# (host:port from METUBE_URL, see docker/16-metube-upstream.envsh) is MeTube, ${RETENTION_DAYS} feeds the "days left" hint in the UI,
+# (host:port from METUBE_URL, see docker/16-metube-upstream.envsh) is MeTube, ${RETENTION_DAYS} and ${TRASH_DAYS} feed the "days left" hints in the UI,
 # ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf, ${COMPANION_TOKEN}
 # (optional) protects everything that touches MeTube or files. Downloads are
 # mounted at /downloads.
@@ -47,6 +47,43 @@ upstream metube {
 map $http_origin $ext_sec_fetch_site {
     ~^(moz|chrome)-extension:// none;
     default $http_sec_fetch_site;
+}
+
+# Rules for /files/ (the file list and the trash). Everything is decided here,
+# before nginx's WebDAV module acts:
+#   $files_src   what the request path is: dir, plain (visible file), trash
+#                (file in /.trash/<unix time>/), hide (any other hidden path)
+#   $files_dest  the same for the Destination header of MOVE; "bad" if it is
+#                not a clean path (no hidden segment, no encoded dot, slash
+#                or backslash, no query)
+#   $files_rule  "" = allowed, deny = 403, hide = 404
+# Allowed: list folders, DELETE a file, MOVE a file visible -> trash or trash
+# -> visible with "Overwrite: F" (an existing file is never replaced, 412).
+# Folders cannot be moved or deleted, files are never served from here.
+map $uri $files_src {
+    "~^/files/\.trash/[0-9]{9,11}/(?:[^/.][^/]*/)*[^/.][^/]*$" trash;
+    "~^/files/(?:[^/.][^/]*/)*[^/.][^/]*$" plain;
+    "~^/files/(?:\.trash/(?:[0-9]{9,11}/)?)?(?:[^/.][^/]*/)*$" dir;
+    default hide;
+}
+map $http_destination $files_dest {
+    "~^(?:https?://[^/?#]+)?/files/\.trash/[0-9]{9,11}/(?:(?:[^/.%?#]|%(?!2[eEfF]|5[cC]|00))(?:[^/%?#]|%(?!2[eEfF]|5[cC]|00))*/)*(?:[^/.%?#]|%(?!2[eEfF]|5[cC]|00))(?:[^/%?#]|%(?!2[eEfF]|5[cC]|00))*$" trash;
+    "~^(?:https?://[^/?#]+)?/files/(?:(?:[^/.%?#]|%(?!2[eEfF]|5[cC]|00))(?:[^/%?#]|%(?!2[eEfF]|5[cC]|00))*/)*(?:[^/.%?#]|%(?!2[eEfF]|5[cC]|00))(?:[^/%?#]|%(?!2[eEfF]|5[cC]|00))*$" plain;
+    default bad;
+}
+map "$request_method:$files_src:$files_dest:$http_overwrite" $files_rule {
+    "~^[A-Z]+:hide:" hide;
+    "~^(GET|HEAD):dir:" "";
+    "~^DELETE:(plain|trash):" "";
+    "~^MOVE:plain:trash:F$" "";
+    "~^MOVE:trash:plain:F$" "";
+    default deny;
+}
+# Folder listings are polled; keep the log readable.
+map $request_method $files_log {
+    GET 0;
+    HEAD 0;
+    default 1;
 }
 
 server {
@@ -141,34 +178,45 @@ server {
     }
 
     # File list as JSON, so the web UI can show per video which formats
-    # (video, audio, text, thumbnail) already exist. Folders are read-only,
-    # files can only be deleted (all formats of a video at once); downloads
-    # still go through /api/download/. Hidden paths (.tmp) are blocked.
-    # Order matters: nginx takes the first matching regex.
-    location ~ "^/files/(.*/)?\." {
-        return 404;
-    }
-    # Named capture: the token check below evaluates a regex map, which
-    # would overwrite $1 and turn the path into the whole folder.
-    location ~ "^/files/(?<file>.*[^/])$" {
-        alias /downloads/$file;
-        if ($auth_ok = 0) {
-            return 401;
-        }
-        dav_methods DELETE;
-        disable_symlinks on;
-        limit_except DELETE { deny all; }
-    }
-    location /files/ {
+    # (video, audio, text, thumbnail) already exist. Folders are read-only;
+    # files can only be deleted or moved into / out of the trash
+    # (/downloads/.trash/<unix time>/<path>, see $files_rule above); downloads
+    # still go through /api/download/. Hidden paths other than the trash
+    # (.tmp, .metube) are blocked. No CORS headers here: MOVE and DELETE need
+    # a preflight, so other web pages cannot use this path.
+    # A prefix location with a plain alias is required: nginx maps the
+    # Destination header of MOVE with the config of the location, a regex
+    # alias would resolve it to the source path again.
+    location ^~ /files/ {
         alias /downloads/;
         if ($auth_ok = 0) {
             return 401;
         }
-        autoindex on;
+        if ($files_rule = hide) {
+            return 404;
+        }
+        if ($files_rule = deny) {
+            return 403;
+        }
+        dav_methods DELETE MOVE;
+        create_full_put_path on;
+        # Honoured by DELETE and reads, NOT by MOVE (checked): a symlink in
+        # the download folder could be followed. Planting one needs write
+        # access to that folder; accepted.
         disable_symlinks on;
+        # Never serve a folder's index.html (the server-level "index" would):
+        # a hidden name cannot exist as a movable file, and the internal
+        # redirect to it hits the "hide" rule (404), so autoindex answers.
+        index .no-index;
+        autoindex on;
         autoindex_format json;
-        access_log off;
-        limit_except GET { deny all; }
+        # Anything but the autoindex JSON must never run as a page on this
+        # origin, even if a file slips through some other way.
+        types {}
+        default_type application/octet-stream;
+        add_header Content-Security-Policy "sandbox" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        access_log /dev/stdout combined if=$files_log;
         add_header Cache-Control "no-store" always;
     }
 
@@ -176,7 +224,7 @@ server {
     location = /config.js {
         default_type application/javascript;
         add_header Cache-Control "no-store" always;
-        return 200 "window.COMPANION = { keepDays: ${RETENTION_DAYS}, authRequired: $auth_on };\n";
+        return 200 "window.COMPANION = { keepDays: ${RETENTION_DAYS}, trashDays: ${TRASH_DAYS}, authRequired: $auth_on };\n";
     }
 
     location = /healthz {
