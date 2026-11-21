@@ -18,7 +18,7 @@ What it is **not**:
 
 - Not a hosted service. Everything runs on the user's own computer or server.
 - Not a replacement for MeTube. It runs **next to** a normal MeTube and talks to it over HTTP.
-- **No login.** Anyone who can reach it can download, delete and use the stored cookies.
+- **No user accounts.** Anyone who can reach it can download, delete and use the stored cookies, unless an access token is set (decision 5).
 
 ## 2. Requirements
 
@@ -36,7 +36,7 @@ Ask these one by one. Defaults are what the shipped compose files use.
 | 2 | **Is MeTube already running there?** | Yes: only the companion is added (`compose.server.yml`), four MeTube settings must be added. No: use the bundled setup (`compose.desktop.yml`, also fine on a server). | No |
 | 3 | **Download folder** | Any folder Docker can write to. | `./downloads` next to the compose file |
 | 4 | **Delete downloads automatically?** | `RETENTION_DAYS=N` deletes files older than N days, hourly. `0` keeps everything until the user deletes it. **There is no trash yet**: deleted files are gone (trash is planned, [#12](https://github.com/falkloewert/metube-companion/issues/12)). | Desktop `0`, server example `30` |
-| 5 | **Who may access it?** | Desktop: only this computer (bound to `127.0.0.1`). Server: home network or VPN only. **Never expose it to the internet** without an authenticating reverse proxy in front. | Local only |
+| 5 | **Who may access it?** | Desktop: only this computer (bound to `127.0.0.1`). Server: home network or VPN. Optional `COMPANION_TOKEN` (16+ characters, A-Z a-z 0-9 . _ ~ -): the web UI asks for it once, the extension has a field; use HTTPS with it, plain HTTP exposes it. **Never expose it to the internet** without an authenticating reverse proxy with HTTPS in front (and set the token too, because the extension cannot pass a login page). | Local only, no token |
 | 6 | **Port** | Any free port. | Desktop `8081`, server `8082` |
 | 7 | **File owner** (Linux, NAS) | The companion must run as the owner of the download folder to delete files (`id` shows uid/gid). | `1000:1000` |
 | 8 | **YouTube sign-in (cookies)** | YouTube sometimes answers "Sign in to confirm you're not a bot", especially for transcripts. **Extension:** sends the user's YouTube, Google, Instagram and TikTok cookies with every send (no other sites). **Manual:** export a `cookies.txt` and upload it under *Cookies* in the web UI. **None:** works until YouTube blocks. Cookies are stored on the instance and used for **all** downloads; anyone with access to the instance acts with that account. | Decide with the user |
@@ -89,6 +89,7 @@ Existing MeTube files without the video ID in their name still work, but are gro
 | Deleting fails | The companion does not run as the owner of the download folder (`user:`). |
 | "History only" deletes files anyway | MeTube has `DELETE_FILE_ON_TRASHCAN` set to `true`; set it to `ask`. |
 | Extension: "Cannot reach …" | Wrong address, not on the same network/VPN, or access not allowed in the settings page. |
+| Web UI asks for an access token, extension says "protected" | `COMPANION_TOKEN` is set: enter it in the web UI once and in the extension settings. |
 | Extension: "looks like MeTube without the companion" | The address points to MeTube itself; use the companion's address and port. |
 | Copy and paste buttons do nothing, no "Install app" | Opened over plain HTTP from another device; use HTTPS (decision 11) or localhost. |
 

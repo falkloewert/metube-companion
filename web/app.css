@@ -189,3 +189,9 @@ a.title:hover { text-decoration: underline; }
   animation: rise .3s var(--out);
 }
 .toast.error { background: var(--bad); color: #fff; }
+
+/* Access token prompt */
+.login { padding: 16px; }
+.login[hidden] { display: none; }
+.login p { margin: 0 0 10px; font-size: 14px; }
+.login input { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--soft); color: inherit; font: inherit; }

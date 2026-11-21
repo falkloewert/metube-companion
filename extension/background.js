@@ -24,6 +24,22 @@ async function getBase() {
   return (base || DEFAULT_BASE).replace(/\/+$/, '');
 }
 
+// Optional access token of a protected instance (COMPANION_TOKEN), sent as a
+// header with every request to the instance.
+async function authHeaders() {
+  const { token } = await browser.storage.local.get('token');
+  return token ? { 'X-Companion-Token': token } : {};
+}
+
+async function ifetch(url, init = {}) {
+  const headers = Object.assign({}, init.headers, await authHeaders());
+  return fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+}
+
+async function downloadHeaders() {
+  return Object.entries(await authHeaders()).map(([name, value]) => ({ name, value }));
+}
+
 function netscape(cookies) {
   const lines = ['# Netscape HTTP Cookie File'];
   for (const c of cookies) {
@@ -68,7 +84,7 @@ async function collectCookies(url) {
 }
 
 async function post(base, path, options) {
-  const res = await fetch(base + path, Object.assign({ credentials: 'include' }, options));
+  const res = await ifetch(base + path, options);
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* HTML instead of JSON */ }
@@ -211,7 +227,7 @@ async function ensureAlarm() {
 }
 
 async function historyItems() {
-  const res = await fetch((await getBase()) + '/ext/history', { credentials: 'include' });
+  const res = await ifetch((await getBase()) + '/ext/history');
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const h = await res.json();
   return [].concat(h.queue || [], h.pending || [], h.done || []);
@@ -274,7 +290,7 @@ async function checkJobs() {
   if (!pending.length && !outbox) { await browser.alarms.clear(JOB_ALARM); return; }
   let h = null;
   try {
-    const res = await fetch((await getBase()) + '/ext/history', { credentials: 'include' });
+    const res = await ifetch((await getBase()) + '/ext/history');
     if (res.ok) h = await res.json();
   } catch (_) { /* MeTube unreachable right now, next alarm */ }
   if (!h) return;
@@ -317,7 +333,7 @@ browser.notifications.onButtonClicked.addListener(async (id, index) => {
   if (!info || !info.filename) return;
   const rel = String(info.filename).replace(/^\/downloads\//, '').replace(/^\/+/, '');
   const url = (await getBase()) + '/ext/download/' + rel.split('/').map(encodeURIComponent).join('/');
-  try { await browser.downloads.download({ url, saveAs: false }); } catch (_) { /* see popup */ }
+  try { await browser.downloads.download({ url, saveAs: false, headers: await downloadHeaders() }); } catch (_) { /* see popup */ }
   await browser.notifications.clear(id);
 });
 

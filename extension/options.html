@@ -38,6 +38,8 @@
     <p style="margin-top:0">Welcome! Enter the address of your MeTube Companion. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
     <label for="base">Address of your MeTube Companion</label>
     <input id="base" type="url" placeholder="http://localhost:8081" spellcheck="false">
+    <label for="token" style="margin-top:14px">Access token (only if the instance sets COMPANION_TOKEN)</label>
+    <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="leave empty if not protected">
     <button id="save">Save</button>
     <p id="status" role="status" aria-live="polite"></p>
     <p>The extension sends your cookies for YouTube, Google, Instagram and TikTok so that signed-in content can be downloaded. No other sites get cookies. The cookies are then stored on the MeTube server in <code>state/cookies.txt</code>.</p>

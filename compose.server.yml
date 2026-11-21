@@ -36,6 +36,9 @@ services:
       METUBE_URL: http://metube:8081
       # Delete files after this many days (0 = keep forever).
       RETENTION_DAYS: "30"
+      # Optional access token (16+ characters: A-Z a-z 0-9 . _ ~ -). Without it,
+      # everyone who can reach the companion can use it.
+      # COMPANION_TOKEN: "change-me-to-a-long-random-string"
     ports:
       - "8082:8080"
     volumes:

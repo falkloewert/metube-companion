@@ -39,6 +39,22 @@ async function getBase() {
   return (base || DEFAULT_BASE).replace(/\/+$/, '');
 }
 
+// Optional access token of a protected instance (COMPANION_TOKEN), sent as a
+// header with every request to the instance.
+async function authHeaders() {
+  const { token } = await browser.storage.local.get('token');
+  return token ? { 'X-Companion-Token': token } : {};
+}
+
+async function ifetch(url, init = {}) {
+  const headers = Object.assign({}, init.headers, await authHeaders());
+  return fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+}
+
+async function downloadHeaders() {
+  return Object.entries(await authHeaders()).map(([name, value]) => ({ name, value }));
+}
+
 const enc = (rel) => rel.split('/').map(encodeURIComponent).join('/');
 
 browser.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
@@ -175,7 +191,7 @@ async function refreshJob() {
   refreshing = true;
   try {
     const base = await getBase();
-    const res = await fetch(base + '/ext/history', { credentials: 'include' });
+    const res = await ifetch(base + '/ext/history');
     if (!res.ok) throw new Error('HTTP ' + res.status);
     const h = await res.json();
     const done = (h.done || []).find((i) => i.url === lastUrl) || null;
@@ -189,7 +205,7 @@ async function refreshJob() {
     if (done && done.filename) dirs.add(splitPath(relPath(done.filename))[0]);
     await Promise.all([...dirs].map(async (dir) => {
       try {
-        const r = await fetch(base + '/files/' + (dir ? enc(dir) + '/' : ''));
+        const r = await ifetch(base + '/files/' + (dir ? enc(dir) + '/' : ''));
         if (r.ok) listings.set(dir, parseListing(await r.json()));
       } catch (_) { /* no list: carry on without siblings */ }
     }));
@@ -277,7 +293,7 @@ async function textOf() {
   const rel = files.captions;
   if (!text || text.rel !== rel) {
     const promise = (async () => {
-      const res = await fetch(await fileUrl(rel), { credentials: 'include' });
+      const res = await ifetch(await fileUrl(rel));
       if (!res.ok) throw new Error('HTTP ' + res.status);
       return cleanTranscript(await res.text());
     })();
@@ -313,7 +329,7 @@ formats.addEventListener('click', async (e) => {
   if (state === 'busy' || state === 'blocked') return;
   if (state === 'have') {
     if (kind === 'captions') { toggleText(panel.hidden); return; }
-    await browser.downloads.download({ url: await fileUrl(files[kind]), saveAs: false });
+    await browser.downloads.download({ url: await fileUrl(files[kind]), saveAs: false, headers: await downloadHeaders() });
     flash(c);
     setStatus(LABEL[kind] + ': download started.');
     return;
@@ -331,9 +347,9 @@ formats.addEventListener('click', async (e) => {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'text/plain;charset=UTF-8' }, body: JSON.stringify(body)
       });
-      const r = await (await fetch(base + '/ext/retry', opts({ id: item.url }))).json();
+      const r = await (await ifetch(base + '/ext/retry', opts({ id: item.url }))).json();
       if (r && r.status === 'error') throw new Error(r.msg || 'Retry failed.');
-      await fetch(base + '/ext/delete', opts({ ids: [item.url], where: 'done' }));
+      await ifetch(base + '/ext/delete', opts({ ids: [item.url], where: 'done' }));
     } else {
       const res = await browser.runtime.sendMessage({ type: 'send', url: lastUrl, kind });
       if (!res || !res.ok) throw new Error((res && res.message) || 'That did not work.');

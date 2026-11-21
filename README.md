@@ -36,6 +36,7 @@ Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube upda
 |---|---|---|
 | `METUBE_URL` | `http://metube:8081` | Where the companion reaches MeTube |
 | `RETENTION_DAYS` | `0` | Delete downloads older than this many days (0 = never); the UI shows the days left |
+| `COMPANION_TOKEN` | empty | Optional access token. The web UI asks for it once, the extension has a field for it. Empty = no check |
 | `user:` (compose) | | Run as the owner of the downloads folder, otherwise deleting files fails |
 
 Mount the MeTube download folder at `/downloads`. The container listens on port 8080.
@@ -46,7 +47,7 @@ YouTube sometimes blocks requests without a signed-in session, especially for tr
 
 ## Security
 
-MeTube Companion has **no login**. Run it on your home network or behind a VPN only. Never expose it to the internet without an authenticating reverse proxy in front.
+MeTube Companion has **no user accounts**. Run it on your home network or behind a VPN. `COMPANION_TOKEN` adds a shared access token for everything that touches MeTube or your files; over plain HTTP the token can be read on the network, so use HTTPS when you set it. To expose it to the internet, put an authenticating reverse proxy (Authelia, Authentik, oauth2-proxy, basic auth) with HTTPS in front, and still set the token: the extension cannot pass a login page, but it can send the token.
 
 ## License
 

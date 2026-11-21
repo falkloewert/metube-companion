@@ -1,0 +1,25 @@
+# Starts MeTube + companion and checks them end to end (tests/smoke.sh).
+# Weekly as well, against the newest MeTube image, to notice when MeTube or
+# YouTube change something the companion depends on.
+name: smoke
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "17 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Pull newest MeTube
+        run: docker pull ghcr.io/alexta69/metube:latest
+      - name: Smoke test
+        run: tests/smoke.sh

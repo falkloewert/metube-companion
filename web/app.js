@@ -36,11 +36,30 @@ function setConn(ok) {
   el.conn.textContent = ok ? 'Connected' : 'Offline';
 }
 
+// Protected instance (COMPANION_TOKEN): the token lives in a cookie, so
+// downloads via plain links work too. Asked once per browser.
+function askToken() {
+  const card = $('login');
+  if (!card.hidden) return;
+  card.hidden = false;
+  $('token').focus();
+}
+
+$('login').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const value = $('token').value.trim();
+  if (!value) return;
+  const secure = location.protocol === 'https:' ? '; Secure' : '';
+  document.cookie = 'companion_token=' + encodeURIComponent(value) + '; path=/; max-age=31536000; SameSite=Strict' + secure;
+  location.reload();
+});
+
 async function api(path, options) {
   const res = await fetch(API + path, options);
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* not JSON */ }
+  if (res.status === 401) { askToken(); throw new Error('Access token needed.'); }
   if (!res.ok) {
     const msg = (data && (data.msg || data.error)) || res.statusText || ('HTTP ' + res.status);
     throw new Error(msg);

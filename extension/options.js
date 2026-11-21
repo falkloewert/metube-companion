@@ -6,14 +6,16 @@
 const DEFAULT_BASE = 'http://localhost:8081';
 const base = document.getElementById('base');
 const status = document.getElementById('status');
+const token = document.getElementById('token');
 
 function say(text, bad) {
   status.textContent = text;
   status.className = bad ? 'bad' : 'ok';
 }
 
-browser.storage.local.get('base').then(({ base: saved }) => {
+browser.storage.local.get(['base', 'token']).then(({ base: saved, token: savedToken }) => {
   base.value = saved || DEFAULT_BASE;
+  token.value = savedToken || '';
 });
 
 document.getElementById('save').addEventListener('click', async () => {
@@ -35,10 +37,14 @@ document.getElementById('save').addEventListener('click', async () => {
     say('The browser did not allow access to ' + origin + '. Without it the extension cannot reach your instance.', true);
     return;
   }
-  await browser.storage.local.set({ base: value });
+  const tok = token.value.trim();
+  await browser.storage.local.set({ base: value, token: tok });
   say('Saved. Checking the connection …');
   try {
-    const res = await fetch(value + '/ext/history', { credentials: 'include' });
+    const res = await fetch(value + '/ext/history', {
+      credentials: 'include', headers: tok ? { 'X-Companion-Token': tok } : {}
+    });
+    if (res.status === 401) throw new Error(tok ? 'The access token is wrong.' : 'This instance is protected, enter its access token.');
     if (res.status === 404) throw new Error('This looks like MeTube without the companion. The extension needs MeTube Companion in front of MeTube.');
     if (!res.ok) throw new Error('The instance answered with HTTP ' + res.status + '.');
     await res.json();

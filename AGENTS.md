@@ -33,6 +33,7 @@ Not a stable API; re-check after MeTube updates.
 for f in web/*.js extension/*.js; do node --check "$f"; done
 ./extension/build.sh
 docker build -t metube-companion:test .
+tests/smoke.sh   # MeTube + companion end to end, incl. token and file rules
 ```
 
-For UI changes, run `compose.desktop.yml` with the test image and try the flow from INSTALL.md section 5.
+For UI changes, also run `compose.desktop.yml` with the test image and try the flow from INSTALL.md section 5.

@@ -1,7 +1,8 @@
 # Site config, rendered at container start (envsubst): ${METUBE_URL} is the
 # MeTube upstream, ${RETENTION_DAYS} feeds the "days left" hint in the UI,
-# ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf. Downloads are mounted
-# at /downloads.
+# ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf, ${COMPANION_TOKEN}
+# (optional) protects everything that touches MeTube or files. Downloads are
+# mounted at /downloads.
 
 # CORS only for the extension (Firefox moz-extension://, Chromium
 # chrome-extension://). With "*" the browser would discard the response when
@@ -10,6 +11,26 @@ map $http_origin $metube_ext_origin {
     default "";
     ~^moz-extension:// $http_origin;
     ~^chrome-extension:// $http_origin;
+}
+
+# Optional access token: sent by the extension as X-Companion-Token, by the
+# web UI as cookie companion_token. Empty COMPANION_TOKEN = no check.
+map "${COMPANION_TOKEN}" $auth_on {
+    "" 0;
+    default 1;
+}
+map $http_x_companion_token $token_header {
+    default 0;
+    "${COMPANION_TOKEN}" 1;
+}
+map $cookie_companion_token $token_cookie {
+    default 0;
+    "${COMPANION_TOKEN}" 1;
+}
+map "$auth_on$token_header$token_cookie" $auth_ok {
+    ~^0 1;
+    ~^1(1.|.1)$ 1;
+    default 0;
 }
 
 server {
@@ -21,6 +42,9 @@ server {
 
     # Web UI: same origin, MeTube's CORS guard sees same-origin.
     location /api/ {
+        if ($auth_ok = 0) {
+            return 401;
+        }
         proxy_pass ${METUBE_URL}/;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
@@ -44,12 +68,15 @@ server {
         proxy_read_timeout 300s;
         add_header Access-Control-Allow-Origin $metube_ext_origin always;
         add_header Access-Control-Allow-Credentials "true" always;
-        add_header Access-Control-Allow-Headers "Content-Type" always;
+        add_header Access-Control-Allow-Headers "Content-Type, X-Companion-Token" always;
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
         add_header Vary Origin always;
         add_header Cache-Control "no-store" always;
         if ($request_method = OPTIONS) {
             return 204;
+        }
+        if ($auth_ok = 0) {
+            return 401;
         }
     }
 
@@ -59,6 +86,9 @@ server {
     location ~ "^/yt/([A-Za-z0-9_-]{11})$" {
         resolver ${NGINX_LOCAL_RESOLVERS} valid=300s ipv6=off;
         set $yt_id $1;
+        if ($auth_ok = 0) {
+            return 401;
+        }
         proxy_pass https://www.youtube.com/watch?v=$yt_id;
         proxy_ssl_server_name on;
         proxy_ssl_verify on;
@@ -83,14 +113,22 @@ server {
     location ~ "^/files/(.*/)?\." {
         return 404;
     }
-    location ~ "^/files/(.*[^/])$" {
-        alias /downloads/$1;
+    # Named capture: the token check below evaluates a regex map, which
+    # would overwrite $1 and turn the path into the whole folder.
+    location ~ "^/files/(?<file>.*[^/])$" {
+        alias /downloads/$file;
+        if ($auth_ok = 0) {
+            return 401;
+        }
         dav_methods DELETE;
         disable_symlinks on;
         limit_except DELETE { deny all; }
     }
     location /files/ {
         alias /downloads/;
+        if ($auth_ok = 0) {
+            return 401;
+        }
         autoindex on;
         disable_symlinks on;
         autoindex_format json;
@@ -102,7 +140,7 @@ server {
     location = /config.js {
         default_type application/javascript;
         add_header Cache-Control "no-store" always;
-        return 200 "window.COMPANION = { keepDays: ${RETENTION_DAYS} };\n";
+        return 200 "window.COMPANION = { keepDays: ${RETENTION_DAYS}, authRequired: $auth_on };\n";
     }
 
     location = /healthz {

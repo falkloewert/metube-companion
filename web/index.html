@@ -19,6 +19,15 @@
       <span id="conn" class="conn" aria-live="polite">Connected</span>
     </header>
 
+    <form class="card login" id="login" hidden>
+      <p><strong>This instance is protected.</strong> Enter the access token (COMPANION_TOKEN) once; this browser remembers it.</p>
+      <div class="row">
+        <label class="sr-only" for="token">Access token</label>
+        <input id="token" type="password" autocomplete="current-password" placeholder="Access token">
+        <button type="submit" class="btn">Unlock</button>
+      </div>
+    </form>
+
     <section class="card composer">
       <label class="sr-only" for="url">Link</label>
       <div class="urlwrap">
