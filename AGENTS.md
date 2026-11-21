@@ -37,3 +37,13 @@ tests/smoke.sh   # MeTube + companion end to end, incl. token and file rules
 ```
 
 For UI changes, also run `compose.desktop.yml` with the test image and try the flow from INSTALL.md section 5.
+
+## Releasing
+
+1. Update `COMPANION_VERSION` in `web/shared.js`, both extension manifests and `CHANGELOG.md`.
+2. Run the checks above, commit, then tag: `git tag vX.Y.Z && git push --tags`.
+3. CI builds the image (`X.Y.Z`, `X.Y`, `latest` on GHCR) and a draft GitHub release with the extension files. Review the draft, paste the changelog entry, publish.
+4. First release only: make the repository and the GHCR package public, enable private vulnerability reporting.
+
+GitHub disables scheduled workflows after 60 days without repository activity; re-enable the weekly smoke test in the Actions tab if that happens.
+

@@ -1,0 +1,11 @@
+#!/bin/sh
+# METUBE_URL (e.g. http://metube:8081) -> METUBE_UPSTREAM (metube:8081) for
+# the nginx upstream block, which takes host:port only.
+u="${METUBE_URL:-http://metube:8081}"
+case "$u" in
+  http://*) u="${u#http://}" ;;
+  *) echo "METUBE_URL must start with http:// (got '$u')" >&2; exit 1 ;;
+esac
+u="${u%%/*}"
+case "$u" in *:*) ;; *) u="$u:80" ;; esac
+export METUBE_UPSTREAM="$u"

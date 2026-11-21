@@ -61,7 +61,7 @@ const FORMATS = [
   { kind: 'video', label: 'Video', ext: /^(mp4|webm|mkv|mov)$/i },
   { kind: 'audio', label: 'Audio', ext: /^(m4a|mp3|opus|ogg|wav|flac)$/i },
   { kind: 'captions', label: 'Text', ext: /^[\w-]+\.txt$/i },
-  { kind: 'thumbnail', label: 'Thumbnail', ext: /^(jpe?g|webp|png)$/i },
+  { kind: 'thumbnail', label: 'Image', ext: /^(jpe?g|webp|png)$/i },
 ];
 
 const VERBS = { have: 'save', missing: 'request', busy: 'loading …', fail: 'retry', blocked: 'waiting' };

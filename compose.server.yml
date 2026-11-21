@@ -2,7 +2,9 @@
 #
 # 1. Add the companion service below to the compose file that runs MeTube
 #    (same file = same network, so http://metube:8081 resolves).
-# 2. Add the three settings marked "required" to your MeTube service.
+# 2. Add the settings marked "required" (and the recommended update time) to
+#    your MeTube service. Merge them with values you already have (for
+#    example an existing YTDL_OPTIONS_PRESETS), do not replace those.
 # 3. docker compose up -d, then open http://<server>:8082
 #
 # No login: keep it on your home network or VPN, or put an authenticating
@@ -18,25 +20,36 @@ services:
       OUTPUT_TEMPLATE: "%(title)s [%(id)s].%(ext)s"
       # required: a failed caption track is a warning, not an error
       YTDL_OPTIONS_PRESETS: '{"text": {"ignoreerrors": true}}'
-      # required: real file times (for the "days left" hint and cleanup)
-      YTDL_OPTIONS: '{"mtime": false}'
+      # required: unfinished downloads outside the visible folder (otherwise
+      # their part files show up as formats and "Delete" could remove them)
+      TEMP_DIR: /downloads/.tmp
       # required: the companion decides per request whether files are deleted
       DELETE_FILE_ON_TRASHCAN: "ask"
+      # recommended: update yt-dlp at start and daily (YouTube changes often).
+      # Only works when MeTube starts as root and drops to PUID/PGID, not with "user:".
+      YTDL_NIGHTLY_UPDATE_TIME: "04:00"
+      TZ: "Europe/Berlin"
     volumes:
       - /path/to/downloads:/downloads
 
   companion:
     image: ghcr.io/falkloewert/metube-companion:latest
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     # Owner of the downloads folder (run `id` on the server): needed to delete files.
     user: "1000:1000"
     depends_on:
       - metube
     environment:
       METUBE_URL: http://metube:8081
-      # Delete files after this many days (0 = keep forever).
-      RETENTION_DAYS: "30"
-      # Optional access token (16+ characters: A-Z a-z 0-9 . _ ~ -). Without it,
+      # Delete files older than this many days (0 = keep forever). Applies to
+      # EVERY file in the download folder, also files MeTube had before.
+      RETENTION_DAYS: "0"
+      # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -). Without it,
       # everyone who can reach the companion can use it.
       # COMPANION_TOKEN: "change-me-to-a-long-random-string"
     ports:

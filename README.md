@@ -8,10 +8,10 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 
 ## What it does
 
-- **One link, four formats.** Paste a link and pick Video, Audio, Text (transcript) or Thumbnail. Tap once to select, tap again to send.
+- **One link, four formats.** Paste a link and pick Video, Audio or Text (transcript); the thumbnail is one tap away on the video's card. Tap once to select, tap again to send.
 - **One card per video.** The history shows every video once, with all formats side by side: *save* what is there, *request* what is missing, and watch progress right inside the cell.
 - **Transcripts that just work.** Detects whether a YouTube video is spoken in English or German (including AI-dubbed videos), fetches the original caption track to dodge YouTube's 429 errors, and turns captions into clean text. Preview, copy, or save as Markdown.
-- **Browser extension** (Chromium and Firefox). Sends the current tab with the cookies MeTube needs for signed-in content, shows the same format cells, and notifies you when a download is done.
+- **Browser extension** (Chromium; Firefox until it is in the add-on store only as a temporary add-on). Sends the current tab, with the cookies of that site (YouTube, Instagram, TikTok) for signed-in content, shows the same format cells, and notifies you when a download is done.
 - **Installable on Android**, with a share target: share a link from the YouTube app straight to your instance.
 - **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once, clears the whole history with or without files.
 - **Report problems** straight from a failed download: opens a prefilled GitHub issue.
@@ -34,7 +34,7 @@ docker compose -f compose.desktop.yml up -d
 # open http://localhost:8081
 ```
 
-Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at noon, so YouTube changes are picked up automatically.
+Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at 12:00 (time zone `TZ`, default UTC), so YouTube changes are picked up automatically. On Linux set `PUID`/`PGID` to your user (`id`).
 
 **Next to an existing MeTube** (server, NAS): copy the `companion` service from [`compose.server.yml`](compose.server.yml) into the compose file that runs MeTube, add the four required MeTube settings marked there, and open `http://<server>:8082`.
 
@@ -43,7 +43,7 @@ Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube upda
 | Variable | Default | Meaning |
 |---|---|---|
 | `METUBE_URL` | `http://metube:8081` | Where the companion reaches MeTube |
-| `RETENTION_DAYS` | `0` | Delete downloads older than this many days (0 = never); the UI shows the days left |
+| `RETENTION_DAYS` | `0` | Delete files in the download folder older than this many days (0 = never; hidden folders such as MeTube's `.metube` state are skipped); the UI shows the days left |
 | `COMPANION_TOKEN` | empty | Optional access token. The web UI asks for it once, the extension has a field for it. Empty = no check |
 | `user:` (compose) | | Run as the owner of the downloads folder, otherwise deleting files fails |
 
@@ -65,11 +65,11 @@ More in the troubleshooting table of [INSTALL.md](INSTALL.md#6-troubleshooting).
 
 ## Compatibility
 
-Tested with MeTube 2026.11 (yt-dlp 2026.10). A [smoke test](tests/smoke.sh) runs every week against the newest MeTube image, because the companion relies on MeTube behavior that is not a stable API (see [AGENTS.md](AGENTS.md)).
+Tested with MeTube 2026.11 (yt-dlp 2026.10) on Linux. Windows (Docker Desktop) and macOS should work the same way but are not tested yet. A [smoke test](tests/smoke.sh) runs on every change and every week against the newest MeTube image, because the companion relies on MeTube behavior that is not a stable API (see [AGENTS.md](AGENTS.md)).
 
 ## Security
 
-MeTube Companion has **no user accounts**. Run it on your home network or behind a VPN. `COMPANION_TOKEN` adds a shared access token for everything that touches MeTube or your files; over plain HTTP the token can be read on the network, so use HTTPS when you set it. To expose it to the internet, put an authenticating reverse proxy (Authelia, Authentik, oauth2-proxy, basic auth) with HTTPS in front, and still set the token: the extension cannot pass a login page, but it can send the token.
+MeTube Companion has **no user accounts**. Run it on your home network or behind a VPN. `COMPANION_TOKEN` adds a shared access token for everything that touches MeTube or your files; over plain HTTP the token can be read on the network, so use HTTPS when you set it. To expose it to the internet, put an authenticating reverse proxy (Authelia, Authentik, oauth2-proxy, basic auth) with HTTPS in front, and still set the token: the extension cannot pass a login page, so let the proxy pass `/ext/` and `/files/` without login and rely on the token there.
 
 ## Contributing
 

@@ -1,0 +1,12 @@
+# Keeps the nginx base image and the GitHub Actions up to date (security fixes
+# reach users only through a new image, so these PRs matter).
+version: 2
+updates:
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

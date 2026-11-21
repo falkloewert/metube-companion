@@ -11,6 +11,13 @@ services:
   metube:
     image: ghcr.io/alexta69/metube:latest
     restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     environment:
       # Owner of the downloads; on Linux run `id` to see yours. Docker Desktop
       # on Windows/macOS ignores this.
@@ -22,14 +29,15 @@ services:
       # The companion decides per request (delete all formats, or "History only").
       DELETE_FILE_ON_TRASHCAN: "ask"
       # Required by the companion: video ID in file names (groups the formats
-      # of a video), the "text" preset (a failed caption track is a warning,
-      # not an error) and real file times (for the "days left" hint).
+      # of a video) and the "text" preset (a failed caption track is a
+      # warning, not an error).
       OUTPUT_TEMPLATE: "%(title)s [%(id)s].%(ext)s"
       YTDL_OPTIONS_PRESETS: '{"text": {"ignoreerrors": true}}'
-      YTDL_OPTIONS: '{"mtime": false}'
       # YouTube changes often; MeTube updates yt-dlp itself every day at this
       # time (while the computer is on).
       YTDL_NIGHTLY_UPDATE_TIME: "12:00"
+      # Time zone for the update time above (default UTC).
+      TZ: "${TZ:-UTC}"
     volumes:
       - "${METUBE_DOWNLOADS:-./downloads}:/downloads"
       - metube-state:/state
@@ -37,23 +45,32 @@ services:
   companion:
     image: ghcr.io/falkloewert/metube-companion:latest
     restart: unless-stopped
+    labels:
+      - com.centurylinklabs.watchtower.enable=true
+    logging: *logging
     user: "${PUID:-1000}:${PGID:-1000}"
     depends_on:
       - metube
     environment:
       METUBE_URL: http://metube:8081
-      # Files stay until you delete them. Set e.g. 30 to clean up automatically.
+      # Files stay until you delete them. Set e.g. 30 to clean up automatically
+      # (applies to every file in the download folder).
       RETENTION_DAYS: "0"
+      # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -), useful when
+      # other devices can reach this instance.
+      # COMPANION_TOKEN: "change-me-to-a-long-random-string"
     ports:
       - "127.0.0.1:8081:8080"
     volumes:
       - "${METUBE_DOWNLOADS:-./downloads}:/downloads"
 
-  # Optional: keep the images themselves up to date (needs the Docker socket).
+  # Optional: keep the images themselves up to date. Only touches the two
+  # services above (--label-enable). Access to the Docker socket is equivalent
+  # to root on this machine; leave it off if that matters to you.
   # updater:
   #   image: ghcr.io/nicholas-fedor/watchtower:latest
   #   restart: unless-stopped
-  #   command: --cleanup --interval 86400
+  #   command: --label-enable --cleanup --interval 86400
   #   volumes:
   #     - /var/run/docker.sock:/var/run/docker.sock
 

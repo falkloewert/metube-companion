@@ -2,7 +2,7 @@
 
 // Extension popup, same interaction as the web UI (web/app.js): tap a tile
 // once to select, tap again to send. Below it the last sent video with the
-// same format bar (Video, Audio, Text, Thumbnail). The shared parts (formats,
+// same format bar (Video, Audio, Text, Image). The shared parts (formats,
 // progress, icons) live in shared.js.
 
 const $ = (id) => document.getElementById(id);
@@ -77,7 +77,7 @@ const tile = (kind) => tiles.querySelector('[data-kind="' + kind + '"]');
 
 function disarm() {
   clearTimeout(armTimer);
-  if (armed && status.textContent.startsWith('Tap again')) setStatus('');
+  if (armed && status.textContent.endsWith('again to start.')) setStatus('');
   armed = null;
   tiles.classList.remove('armed');
   tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
@@ -186,6 +186,17 @@ function flash(btn) {
   setTimeout(() => btn.classList.remove('flash'), 900);
 }
 
+// Why the instance does not answer: protected (token missing or wrong) or
+// not reachable at all.
+async function unreachable() {
+  const base = await getBase();
+  try {
+    const r = await ifetch(base + '/ext/history');
+    if (r.status === 401) return 'This instance is protected. Enter its access token in Settings.';
+  } catch (_) { /* not reachable */ }
+  return 'Cannot reach ' + base + '. Check the address in Settings and your network or VPN.';
+}
+
 async function refreshJob() {
   if (!lastUrl || refreshing) return;
   refreshing = true;
@@ -217,7 +228,7 @@ async function refreshJob() {
     render(done, running, byKind(siblings(done || { url: lastUrl }, listings, stemBase)));
   } catch (_) {
     job.hidden = true;
-    if (!status.textContent) setStatus('Cannot reach ' + (await getBase()) + '. Check the address in Settings and your network or VPN.', true);
+    if (!status.textContent) setStatus(await unreachable(), true);
   } finally {
     refreshing = false;
   }
@@ -266,7 +277,7 @@ function render(done, running, found) {
     c.classList.toggle('wait', !!r && r.pct === null);
     c.style.setProperty('--p', (r && r.pct !== null ? Math.max(4, r.pct) : 0) + '%');
     if (r) verb = r.verb;
-    if (c.querySelector('.verb').textContent !== verb) setVerb(c, verb);
+    if (!c.classList.contains('cancel') && c.querySelector('.verb').textContent !== verb) setVerb(c, verb);
     if (was === 'busy' && state === 'have') {
       c.classList.add('finishing');
       setTimeout(() => { c.classList.remove('finishing'); flash(c); }, 450);
@@ -326,7 +337,29 @@ formats.addEventListener('click', async (e) => {
   if (!c || !item) return;
   const kind = c.dataset.kind;
   const state = c.dataset.state;
-  if (state === 'busy' || state === 'blocked') return;
+  if (state === 'blocked' || c.dataset.inflight === '1') return;
+  // A running format is cancelled by tapping its cell twice.
+  if (state === 'busy') {
+    if (!c.classList.contains('cancel')) {
+      c.classList.add('cancel');
+      setVerb(c, 'tap to cancel');
+      setTimeout(() => c.classList.remove('cancel'), 4000);
+      return;
+    }
+    c.classList.remove('cancel');
+    try {
+      const r = await ifetch((await getBase()) + '/ext/delete', {
+        method: 'POST', headers: { 'Content-Type': 'text/plain;charset=UTF-8' },
+        body: JSON.stringify({ ids: [lastUrl], where: 'queue' })
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      setStatus('Cancelled.');
+    } catch (err) {
+      setStatus('Cancel did not work: ' + err.message, true);
+    }
+    refreshJob();
+    return;
+  }
   if (state === 'have') {
     if (kind === 'captions') { toggleText(panel.hidden); return; }
     await browser.downloads.download({ url: await fileUrl(files[kind]), saveAs: false, headers: await downloadHeaders() });
@@ -413,7 +446,7 @@ $('ver').textContent = 'v' + browser.runtime.getManifest().version;
 // Tell right away when the instance is not reachable (wrong address,
 // not on the home network or VPN, missing permission).
 getBase().then((base) => fetch(base + '/healthz').then((r) => { if (!r.ok) throw new Error(); }))
-  .catch(async () => setStatus('Cannot reach ' + (await getBase()) + '. Check the address in Settings and your network or VPN.', true));
+  .catch(async () => setStatus(await unreachable(), true));
 
 // After opening, keep showing the last video (also if the context menu
 // started it).

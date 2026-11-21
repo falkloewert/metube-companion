@@ -3,8 +3,6 @@
 #   metube-companion-firefox.xpi     Firefox (manifest.json)
 #   metube-companion-chromium.zip    Chromium (Manifest V3 from manifest.chromium.json)
 # shared.js and shared.css come from ../web (shared with the web UI).
-# TODO(#4): the manifests fix the instance host permission to
-# http://localhost:8081/*; make it configurable at runtime.
 set -eu
 cd "$(dirname "$0")"
 mkdir -p dist

@@ -10,13 +10,13 @@ if (typeof importScripts === 'function') importScripts('compat.js', 'shared.js')
 // also asks for the host permission (optional_host_permissions).
 const DEFAULT_BASE = 'http://localhost:8081';
 
-// Cookies for these sites only. Never all cookies of the browser: they
-// include banking and mail sessions that MeTube has no business with.
-const ROOTS = [
-  'https://www.youtube.com/',
-  'https://www.google.com/',
-  'https://www.instagram.com/',
-  'https://www.tiktok.com/'
+// Cookies only for the site of the link, and only for these sites. Never all
+// cookies of the browser, and never google.com: those are the whole Google
+// account (mail, drive), yt-dlp only needs the youtube.com ones.
+const COOKIE_SITES = [
+  { host: /(^|\.)(youtube\.com|youtu\.be)$/, root: 'https://www.youtube.com/' },
+  { host: /(^|\.)instagram\.com$/, root: 'https://www.instagram.com/' },
+  { host: /(^|\.)tiktok\.com$/, root: 'https://www.tiktok.com/' },
 ];
 
 async function getBase() {
@@ -57,12 +57,9 @@ function netscape(cookies) {
 }
 
 async function collectCookies(url) {
-  const roots = ROOTS.slice();
-  try {
-    const u = new URL(url);
-    const same = u.origin + '/';
-    if (!roots.includes(same)) roots.push(same);
-  } catch (_) { /* invalid URL, then only the fixed sites */ }
+  let host = '';
+  try { host = new URL(url).hostname; } catch (_) { /* no cookies */ }
+  const roots = COOKIE_SITES.filter((s) => s.host.test(host)).map((s) => s.root);
 
   const seen = new Set();
   const cookies = [];
@@ -242,6 +239,8 @@ function notifId(url) {
 async function notifyItem(item) {
   const title = item.title || item.url;
   const done = item.status === 'finished' && item.filename;
+  // "finished" without a file means nothing was found (e.g. no captions).
+  const empty = item.status === 'finished' && !item.filename;
   const id = notifId(item.url || title);
   // The mapping holds target URL and file: clicking the body opens the
   // original, the button downloads the file.
@@ -251,10 +250,10 @@ async function notifyItem(item) {
   const opts = {
     type: 'basic',
     iconUrl: browser.runtime.getURL('icon-48.png'),
-    title: item.status === 'finished' ? 'MeTube: done' : 'MeTube: error',
-    message: item.status === 'finished'
-      ? title + ' is downloaded.'
-      : title + ': ' + friendlyError(item.msg || item.error || 'Download failed')
+    title: done ? 'MeTube: done' : 'MeTube: error',
+    message: done ? title + ' is downloaded.'
+      : empty ? title + ': ' + (item.download_type === 'captions' ? 'no text found.' : 'no file was created.')
+        : title + ': ' + friendlyError(item.msg || item.error || 'Download failed')
   };
   // Only Chromium and Firefox know buttons; set as an option, not an empty array.
   if (done) opts.buttons = [{ title: 'Download to this computer', iconUrl: browser.runtime.getURL('icon-48.png') }];

@@ -137,7 +137,7 @@ const tile = (kind) => el.tiles.querySelector('[data-kind="' + kind + '"]');
 
 function disarm() {
   clearTimeout(armTimer);
-  if (armed && el.status.textContent.startsWith('Tap again')) setStatus('');
+  if (armed && el.status.textContent.endsWith('again to start.')) setStatus('');
   armed = null;
   el.tiles.classList.remove('armed');
   el.tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
@@ -259,6 +259,7 @@ const listings = new Map();   // folder -> Map file name -> mtime (ms)
 const KEEP_DAYS = Number((window.COMPANION || {}).keepDays) || 0;
 let listingsAt = 0;
 let listingsSig = '';
+let lastQueueSig = '';
 
 // Remember the stem per URL: if a later job fails (no file), the formats
 // already downloaded stay visible.
@@ -341,6 +342,23 @@ function saveFile(href, name) {
   a.remove();
 }
 
+// Old-style copy through a hidden text field: works on plain HTTP, where the
+// clipboard API is missing.
+function copyFallback(text) {
+  if (!text) return false;
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.position = 'fixed';
+  ta.style.opacity = '0';
+  document.body.appendChild(ta);
+  ta.select();
+  let ok = false;
+  try { ok = document.execCommand('copy'); } catch (_) { /* not supported */ }
+  ta.remove();
+  return ok;
+}
+
 function saveMd(item, text) {
   const title = itemTitle(item) || 'Transcript';
   const md = '# ' + title + '\n\nSource: ' + (item.url || '') + '\n\n' + text + '\n';
@@ -388,7 +406,7 @@ function makeNode() {
     c.type = 'button';
     c.className = 'fmt';
     c.dataset.kind = f.kind;
-    c.innerHTML = (ICON[f.kind] || ICON.thumbnail) + SPIN + CHECK('tick') +
+    c.innerHTML = ICON[f.kind] + SPIN + CHECK('tick') +
       '<span class="lbl">' + f.label + '</span><span class="verb"></span>';
     formats.appendChild(c);
     cells[f.kind] = c;
@@ -427,7 +445,11 @@ function makeNode() {
       }
       flash(copy);
       toast('Text copied.');
-    } catch (e) { toast('Copy failed: ' + e.message, true); }
+    } catch (e) {
+      // Browsers only allow the clipboard over HTTPS or localhost.
+      if (copyFallback(await textOf(n).catch(() => ''))) { flash(copy); toast('Text copied.'); return; }
+      toast(window.isSecureContext ? 'Copy did not work, use .md instead.' : 'Copying needs HTTPS here, use .md instead.', true);
+    }
   });
   const md = panel.querySelector('.md');
   md.addEventListener('click', async () => {
@@ -442,7 +464,7 @@ function makeNode() {
   b.del.addEventListener('click', async () => {
     if (!b.del.classList.contains('armed')) {
       document.querySelectorAll('.act.del.armed').forEach((x) => x.classList.remove('armed'));
-      b.del.querySelector('.ask').textContent = n.where === 'queue' ? 'Cancel?' : 'Delete all?';
+      b.del.querySelector('.ask').textContent = n.where === 'queue' ? 'Cancel?' : 'Delete files?';
       b.del.classList.add('armed');
       n.delTimer = setTimeout(() => b.del.classList.remove('armed'), 4000);
       return;
@@ -451,7 +473,7 @@ function makeNode() {
     b.del.disabled = true;
     try {
       const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: true });
-      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube hat abgelehnt.');
+      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
       // MeTube deletes only the last job's file; nginx removes the other
       // formats of the same video (DELETE /files/...). 404 = already gone.
       if (n.where === 'done') {
@@ -519,11 +541,29 @@ function toggleText(n, open) {
 }
 
 // A tap does what the cell says: save, show text, request, retry. Requesting
-// does not ask first, it costs nothing and can be cancelled under "Running".
+// does not ask first; a running format is cancelled by tapping its cell twice.
 async function onFormat(n, c) {
   const kind = c.dataset.kind;
   const state = c.dataset.state;
-  if (state === 'busy' || state === 'blocked') return;
+  if (state === 'blocked' || c.dataset.inflight === '1') return;
+  if (state === 'busy') {
+    if (!c.classList.contains('cancel')) {
+      c.classList.add('cancel');
+      setVerb(c, c.querySelector('.lbl').textContent, 'tap to cancel');
+      setTimeout(() => c.classList.remove('cancel'), 4000);
+      return;
+    }
+    c.classList.remove('cancel');
+    try {
+      const res = await post('/delete', { ids: [n.item.url], where: 'queue' });
+      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+      toast('Cancelled.');
+    } catch (e) {
+      toast('Cancel did not work: ' + e.message, true);
+    }
+    refresh();
+    return;
+  }
   if (state === 'have') {
     if (kind === 'captions') { toggleText(n, n.panel.hidden); return; }
     saveFile(downloadUrl(n.files[kind]), splitPath(n.files[kind])[1]);
@@ -593,6 +633,7 @@ function update(n, item, where) {
   const run = running ? progress(item, progs) : null;
   li.querySelector('.meta').textContent = run ? run.verb :
     (finished && ageText(n.files)) || metaFor(item, kind);
+  li.querySelector('.meta').title = finished && KEEP_DAYS ? 'Files are deleted automatically ' + KEEP_DAYS + ' days after download.' : '';
 
   li.classList.toggle('running', running);
   li.classList.toggle('finished', finished);
@@ -624,7 +665,7 @@ function update(n, item, where) {
     c.classList.toggle('wait', !!run && run.pct === null);
     c.style.setProperty('--p', (run && run.pct !== null ? Math.max(4, run.pct) : 0) + '%');
     if (run) verb = run.verb;
-    if (c.querySelector('.verb').textContent !== verb) setVerb(c, f.label, verb);
+    if (!c.classList.contains('cancel') && c.querySelector('.verb').textContent !== verb) setVerb(c, f.label, verb);
     if (was === 'busy' && state === 'have') {
       c.classList.remove('wait');
       c.classList.add('finishing');
@@ -678,6 +719,9 @@ async function doRefresh() {
     const stale = Object.keys(stems).filter((url) => !known.has(url));
     stale.forEach((url) => { delete stems[url]; });
     if (stale.length) saveStems();
+    // A job left the queue: its file is new, so do not wait for the listing cache.
+    const qsig = queue.map((i) => i.url + '|' + (i.download_type || 'video')).join(',');
+    if (qsig !== lastQueueSig) { lastQueueSig = qsig; listingsAt = 0; }
     await loadListings(done);
     jobs = new Map();
     queue.forEach((i) => {
@@ -722,7 +766,7 @@ let lastDone = [];
 
 clear.btn.addEventListener('click', () => {
   const n = lastDone.length;
-  clear.q.textContent = 'Delete ' + n + (n === 1 ? ' video' : ' videos') + ' with all their files?';
+  clear.q.textContent = 'Clear ' + n + (n === 1 ? ' entry' : ' entries') + ' from the history?';
   clear.bar.hidden = false;
   $('clear-cancel').focus();
 });

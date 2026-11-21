@@ -60,11 +60,23 @@ check 403 "files are not served" "$B/files/x.jpg"
 check 403 "folders cannot be deleted" -X DELETE "$B/files/sub/"
 check 404 "hidden paths blocked" "$B/files/.tmp/"
 curl -s "$B/yt/notanid" | grep -q "MeTube Companion" && ok "/yt/ only proxies video IDs" || bad "/yt/ proxied a non-ID"
+check 404 "MeTube live updates blocked on /ext/" "$B/ext/socket.io/?EIO=4&transport=polling"
+
+echo "cross-site requests (CSRF)"
+J='{"url":"https://example.com/csrf-test","download_type":"thumbnail","format":"jpg","quality":"best"}'
+check 403 "foreign page cannot add via /ext/" -H 'Origin: https://evil.example' -H 'Sec-Fetch-Site: cross-site' -H 'Content-Type: text/plain' -d "$J" "$B/ext/add"
+check 403 "foreign page cannot add via /api/" -H 'Origin: https://evil.example' -H 'Sec-Fetch-Site: cross-site' -H 'Content-Type: text/plain' -d "$J" "$B/api/add"
+check 403 "foreign page cannot delete via /ext/" -H 'Origin: https://evil.example' -H 'Sec-Fetch-Site: cross-site' -H 'Content-Type: text/plain' -d '{"ids":["x"],"where":"done"}' "$B/ext/delete"
+check 200 "extension origin can use /ext/" -H 'Origin: chrome-extension://smoketest' -H 'Sec-Fetch-Site: cross-site' "$B/ext/history"
 
 echo "download (thumbnail of $VIDEO)"
-curl -s -H 'Content-Type: application/json' \
+# The answer of /add is checked regardless of YouTube: a changed MeTube API
+# must fail the test, only YouTube refusing the download is a warning.
+resp=$(curl -s -w '\n%{http_code}' -H 'Content-Type: application/json' \
   -d "{\"url\":\"https://www.youtube.com/watch?v=$VIDEO\",\"download_type\":\"thumbnail\",\"format\":\"jpg\",\"quality\":\"best\"}" \
-  "$B/api/add" >/dev/null
+  "$B/api/add")
+[ "$(printf '%s' "$resp" | tail -1)" = 200 ] && printf '%s' "$resp" | head -1 | grep -q '"status": "ok"' \
+  && ok "MeTube accepted the job" || bad "MeTube /add answered: $resp"
 f=""
 i=0; while [ $i -lt 90 ]; do
   f=$(ls "$WORK/downloads" | grep "\[$VIDEO\]\.jpg$" || true)
@@ -80,8 +92,34 @@ if [ -n "$f" ]; then
   [ -z "$(ls "$WORK/downloads" | grep "$VIDEO" || true)" ] && ok "file gone" || bad "file still there"
 else
   msg=$(curl -s "$B/api/history" | tr ',' '\n' | grep '"msg"' | head -1)
-  if [ "${STRICT:-0}" = 1 ]; then bad "no download: $msg"; else warn "no download (YouTube may block this network): $msg"; fi
+  if [ "${STRICT:-0}" != 1 ] && printf '%s' "$msg" | grep -qiE "sign in|429|too many requests|not a bot"; then
+    warn "no download, YouTube refused this network: $msg"
+  else
+    bad "no download: ${msg:-no message, nothing in the history}"
+  fi
 fi
+
+echo "history only vs. with files (DELETE_FILE_ON_TRASHCAN=ask)"
+if [ -n "$f" ]; then
+  U="https://www.youtube.com/watch?v=$VIDEO"
+  curl -s -H 'Content-Type: application/json' \
+    -d "{\"url\":\"$U\",\"download_type\":\"thumbnail\",\"format\":\"jpg\",\"quality\":\"best\"}" "$B/api/add" >/dev/null
+  i=0; until ls "$WORK/downloads" | grep -q "\[$VIDEO\]\.jpg$" || [ $i -gt 90 ]; do i=$((i + 1)); sleep 1; done
+  # MeTube reports "finished" while the job is still in the queue; wait until
+  # it has moved to the history, otherwise the delete hits the old entry.
+  i=0; until curl -s "$B/api/history" | python3 -c "import sys,json; d=json.load(sys.stdin); sys.exit(any('$VIDEO' in j['url'] for j in d['queue']+d['pending']))" || [ $i -gt 30 ]; do i=$((i + 1)); sleep 1; done
+  curl -s -H 'Content-Type: application/json' -d "{\"ids\":[\"$U\"],\"where\":\"done\",\"delete_files\":false}" "$B/api/delete" >/dev/null
+  sleep 1
+  ls "$WORK/downloads" | grep -q "\[$VIDEO\]" && ok "history only keeps the file" || bad "history only deleted the file"
+  curl -s "$B/api/history" | grep -q "$VIDEO" && bad "entry still in history" || ok "entry removed from history"
+else
+  warn "skipped (no download)"
+fi
+
+echo "MeTube recreated (new container, maybe a new IP)"
+docker compose -p "$P" -f "$WORK/compose.yml" up -d --force-recreate metube >/dev/null 2>&1
+i=0; until [ "$(code "$B/api/history")" = 200 ] || [ $i -gt 90 ]; do i=$((i + 1)); sleep 1; done
+check 200 "companion reaches the new MeTube without restart" "$B/api/history"
 
 echo "access token"
 COMPANION_TOKEN=smoke-token-1234567890 up companion
@@ -95,10 +133,13 @@ check 200 "API with cookie" -b 'companion_token=smoke-token-1234567890' "$B/api/
 check 401 "wrong token" -H 'X-Companion-Token: wrong-token-123456789' "$B/api/history"
 curl -s "$B/config.js" | grep -q 'authRequired: 1' && ok "config.js reports the token" || bad "config.js: $(curl -s "$B/config.js")"
 
-echo "unsafe token is rejected"
-COMPANION_TOKEN='short"x' up companion
-sleep 3
-docker compose -p "$P" -f "$WORK/compose.yml" logs companion 2>&1 | grep -q "COMPANION_TOKEN must be" && ok "container refuses it" || bad "unsafe token not rejected"
+echo "unsafe tokens are rejected"
+for t in 'short"x' '~aaaaaaaaaaaaaaaaaa'; do
+  COMPANION_TOKEN="$t" up companion
+  sleep 3
+  docker compose -p "$P" -f "$WORK/compose.yml" logs --since 10s companion 2>&1 | grep -q "COMPANION_TOKEN must be" \
+    && ok "container refuses '$t'" || bad "unsafe token '$t' not rejected"
+done
 
 echo
 [ $fails -eq 0 ] && echo "smoke test passed" || { echo "smoke test: $fails failure(s)"; exit 1; }

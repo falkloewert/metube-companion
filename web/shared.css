@@ -8,14 +8,14 @@
   color-scheme: light dark;
   --bg: #eef1f5; --card: #fff; --line: #d9e0e9; --soft: #e8edf4;
   --text: #16202b; --muted: #59677a; --accent: #0b6bcb; --accent-2: #6a5cff;
-  --ok: #178a4c; --ok-ink: #157a43; --link-ink: #0b6bcb; --bad: #b3261e; --on: #fff; --fill: #0b6bcb;
+  --ok: #13703f; --ok-ink: #106436; --link-ink: #0b6bcb; --bad: #b3261e; --bad-fill: #b3261e; --on: #fff; --fill: #0b6bcb;
   --spring: cubic-bezier(.3, 1.5, .6, 1); --out: cubic-bezier(.16, 1, .3, 1);
 }
 @media (prefers-color-scheme: dark) {
   :root {
     --bg: #0f1216; --card: #1b212a; --line: #2c3642; --soft: #252e3a;
     --text: #e9eef5; --muted: #9daab8; --accent: #3d8bfd; --accent-2: #6c5ce7;
-    --bad: #ff6b63; --fill: #2563d6; --ok-ink: #4ade80; --link-ink: #7ab4ff;
+    --bad: #ff6b63; --bad-fill: #c62f28; --fill: #2563d6; --ok-ink: #4ade80; --link-ink: #7ab4ff;
   }
 }
 
@@ -31,7 +31,7 @@
 .tile svg { width: 26px; height: 26px; }
 .tile:hover { color: var(--text); }
 .tile:active { transform: scale(.94); }
-.tiles.armed .tile:not(.armed), .tiles.sending .tile:not(.busy):not(.done):not(.fail) { opacity: .5; }
+.tiles.armed .tile:not(.armed), .tiles.sending .tile:not(.busy):not(.done):not(.fail) { opacity: .72; }
 .tiles.sending .tile { pointer-events: none; }
 .tile.armed, .tile.busy {
   background-color: var(--fill); background-image: linear-gradient(135deg, var(--fill), var(--accent-2)); color: var(--on);
@@ -51,7 +51,7 @@
 .tile.done .ico, .tile.done .name { display: none; }
 .tile.done .check, .tile.done .donetxt { display: block; }
 .tile.done .check path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .3s .05s var(--out) forwards; }
-.tile.fail { animation: shake .35s; background-image: none; background-color: var(--bad); color: var(--on); }
+.tile.fail { animation: shake .35s; background-image: none; background-color: var(--bad-fill); color: var(--on); }
 .burst { position: absolute; left: 50%; top: 38%; border-radius: 50%; background: var(--on); opacity: 0; pointer-events: none; z-index: 0; }
 .tile.done .burst { animation: burst .55s var(--out) forwards; }
 
@@ -70,7 +70,7 @@
 .fmt svg { width: 19px; height: 19px; margin-bottom: 2px; }
 .fmt .spin, .fmt .tick { display: none; }
 .fmt:active { transform: scale(.93); }
-.fmt .verb { font-size: 10.5px; font-weight: 500; opacity: .85; }
+.fmt .verb { font-size: 10.5px; font-weight: 500; }
 .fmt[data-state="have"] { color: var(--ok-ink); background: color-mix(in srgb, var(--ok-ink) 13%, transparent); }
 .fmt[data-state="have"]:hover, .fmt.open { background: var(--ok); color: var(--on); }
 .fmt[data-state="missing"], .fmt[data-state="blocked"] {
@@ -81,7 +81,8 @@
 .fmt[data-state="missing"]:hover { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
 .fmt[data-state="blocked"] { opacity: .45; pointer-events: none; }
 .fmt[data-state="fail"] { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
-.fmt[data-state="busy"] { color: var(--link-ink); pointer-events: none; }
+.fmt[data-state="busy"] { color: var(--link-ink); }
+.fmt[data-state="busy"].cancel { color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, transparent); }
 .fmt[data-state="busy"] svg:not(.spin) { display: none; }
 .fmt[data-state="busy"] .spin { display: block; animation: spin .75s linear infinite; }
 /* Progress of the running format right in the cell */
@@ -148,4 +149,10 @@
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
   .tile.done .check path, .act.flash .tick path, .fmt.flash .tick path, .pill.flash .tick path { stroke-dashoffset: 0; }
+}
+
+/* Narrow phones (320-360 px): keep "Thumbnail" inside its cell. */
+@media (max-width: 380px) {
+  .fmt { font-size: 11px; letter-spacing: -.2px; padding: 0 2px; }
+  .fmt .verb { font-size: 10px; }
 }

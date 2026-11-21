@@ -1,6 +1,6 @@
 # MeTube Companion browser extension (Chromium and Firefox)
 
-Sends the current link (or a link via right-click) to your own MeTube instance, together with the cookies of YouTube, Google, Instagram and TikTok so that signed-in content can be downloaded. No other site gets cookies.
+Sends the current link (or a link via right-click) to your own MeTube instance. For YouTube, Instagram and TikTok links it also uploads your cookies for that site, so signed-in content can be downloaded. No other site gets cookies, and never your Google account.
 
 The extension only works against an instance served through the Companion nginx sidecar (`/ext/...`). Talking to MeTube directly fails at its cross-origin guard.
 
@@ -28,15 +28,15 @@ for s in 48 96 128; do convert -background none -density 400 -resize ${s}x${s} -
 ## Usage
 
 - **Toolbar button:** opens a small window with the current tab's link prefilled. Three tiles, Video, Audio, Text: tap once to select, tap again to send. Esc, a click elsewhere or 4 seconds of waiting cancels.
-- **Last video:** below it, the last sent video with the same format bar as the web UI (Video, Audio, Text, Thumbnail). Each cell shows a verb ("save", "show", "request", "loading N %", "retry", "waiting"); a tap does what it says. Progress runs inside the cell and only moves forward.
+- **Last video:** below it, the last sent video with the same format bar as the web UI (Video, Audio, Text, Image). Each cell shows a verb ("save", "show", "request", "loading N %", "retry", "waiting"); a tap does what it says. Progress runs inside the cell and only moves forward.
 - **Text:** downloads the transcript. "show" opens a preview with word count, plus "Copy all" (running text) and "As .md" (title, source, text). The extension detects the spoken language on the YouTube page: the original audio track first (for AI-dubbed videos the default track is often German), then the only automatic caption track, then manual captions. English stays English, everything else becomes German.
 - **Right-click** on a link or page: "Send to MeTube" (always video).
 - **Notifications:** after sending, the extension polls for 32 seconds every 4 seconds; if that is not enough, an alarm checks every 30 seconds (Chromium; Firefox rounds up to 1 minute). It reports "MeTube: done" or "MeTube: error" as a browser notification, even with the popup closed. The "done" notification has a "Download to this computer" button; clicking the notification opens the source page. The notification icon must be PNG: Chromium rejects SVG and the notification fails silently.
-- **Instance address:** extension settings (currently a fixed placeholder, see issue #4).
+- **Instance address and access token:** set in the extension settings, which open on first install; saving asks the browser for access to that address and tests the connection.
 
 ## Notes
 
-- **Cookies:** the extension reads only the cookies of the four sites above, never all browser cookies. It uploads them before every send, so they are always fresh. On the server they end up in `state/cookies.txt` and apply to all downloads. An upload replaces the whole file: cookies uploaded manually in parallel overwrite the extension's and vice versa.
+- **Cookies:** the extension reads only the cookies of the site you send (YouTube, Instagram or TikTok), never all browser cookies. It uploads them before every send, so they are always fresh. On the server they end up in `state/cookies.txt` and apply to all downloads. An upload replaces the whole file: cookies uploaded manually in parallel overwrite the extension's and vice versa.
 - **429 / original caption track:** YouTube often blocks the normal caption track ("en") with "Too Many Requests", but not the original one ("en-orig"). The extension therefore requests both (`subtitle_mode: prefer_auto`), and a MeTube preset named `text` (`YTDL_OPTIONS_PRESETS`) turns a failed track into a warning instead of an error.
 - **Link form:** YouTube links are sent as `watch?v=<id>` (without `&t=`, playlist, `si=`). MeTube tracks the job under that form; with the original link the extension could not find it again and stayed silent.
 

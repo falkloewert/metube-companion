@@ -15,7 +15,6 @@
   "host_permissions": [
     "http://localhost:8081/*",
     "https://*.youtube.com/*",
-    "https://*.google.com/*",
     "https://*.instagram.com/*",
     "https://*.tiktok.com/*"
   ],

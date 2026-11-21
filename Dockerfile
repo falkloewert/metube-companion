@@ -10,6 +10,7 @@ ENV METUBE_URL=http://metube:8081 \
 COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/05-check-token.sh /docker-entrypoint.d/05-check-token.sh
+COPY docker/16-metube-upstream.envsh /docker-entrypoint.d/16-metube-upstream.envsh
 COPY docker/40-cleanup.sh /docker-entrypoint.d/40-cleanup.sh
 COPY web/ /usr/share/nginx/html/
 

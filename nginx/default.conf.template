@@ -1,5 +1,5 @@
-# Site config, rendered at container start (envsubst): ${METUBE_URL} is the
-# MeTube upstream, ${RETENTION_DAYS} feeds the "days left" hint in the UI,
+# Site config, rendered at container start (envsubst): ${METUBE_UPSTREAM}
+# (host:port from METUBE_URL, see docker/16-metube-upstream.envsh) is MeTube, ${RETENTION_DAYS} feeds the "days left" hint in the UI,
 # ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf, ${COMPANION_TOKEN}
 # (optional) protects everything that touches MeTube or files. Downloads are
 # mounted at /downloads.
@@ -33,6 +33,22 @@ map "$auth_on$token_header$token_cookie" $auth_ok {
     default 0;
 }
 
+# MeTube is re-resolved every 10 s, so a recreated MeTube container with a new
+# IP keeps working without restarting the companion.
+resolver ${NGINX_LOCAL_RESOLVERS} valid=10s ipv6=off;
+upstream metube {
+    zone metube 64k;
+    server ${METUBE_UPSTREAM} resolve;
+}
+
+# Only real extension requests may pass MeTube's cross-origin guard; any other
+# origin keeps the browser's own Sec-Fetch-Site, so other web pages cannot use
+# /ext/ to start downloads, delete files or upload cookies (CSRF).
+map $http_origin $ext_sec_fetch_site {
+    ~^(moz|chrome)-extension:// none;
+    default $http_sec_fetch_site;
+}
+
 server {
     listen 8080;
     server_name _;
@@ -45,7 +61,7 @@ server {
         if ($auth_ok = 0) {
             return 401;
         }
-        proxy_pass ${METUBE_URL}/;
+        proxy_pass http://metube/;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
         proxy_set_header X-Forwarded-Proto $scheme;
@@ -53,15 +69,25 @@ server {
         proxy_request_buffering off;
         proxy_read_timeout 300s;
         add_header Cache-Control "no-store" always;
+        # Downloaded files (e.g. .html, .svg) must never run as part of this site.
+        add_header Content-Security-Policy "sandbox" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        # The UI polls the history every 2 s; keep the log readable.
+        access_log off;
     }
 
     # Extension: separate path, so the guard is not disabled for all pages.
-    # No authentication in front of this path.
+    # MeTube's live updates are not needed by the extension; blocking them keeps
+    # other web pages from reading the history through this path.
+    location ^~ /ext/socket.io {
+        return 404;
+    }
+
     location /ext/ {
-        proxy_pass ${METUBE_URL}/;
+        proxy_pass http://metube/;
         proxy_http_version 1.1;
         proxy_set_header Host $http_host;
-        proxy_set_header Sec-Fetch-Site none;
+        proxy_set_header Sec-Fetch-Site $ext_sec_fetch_site;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_request_buffering off;
@@ -72,6 +98,10 @@ server {
         add_header Access-Control-Allow-Methods "GET, POST, OPTIONS" always;
         add_header Vary Origin always;
         add_header Cache-Control "no-store" always;
+        # Downloaded files (e.g. .html, .svg) must never run as part of this site.
+        add_header Content-Security-Policy "sandbox" always;
+        add_header X-Content-Type-Options "nosniff" always;
+        access_log off;
         if ($request_method = OPTIONS) {
             return 204;
         }
@@ -99,6 +129,11 @@ server {
         proxy_set_header Accept-Language "de-DE,de;q=0.9,en;q=0.8";
         proxy_set_header User-Agent "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130 Safari/537.36";
         proxy_hide_header Set-Cookie;
+        # Only read as text by the UI; never render YouTube's page on this origin.
+        proxy_hide_header Content-Type;
+        proxy_hide_header Content-Security-Policy;
+        add_header Content-Type "text/plain; charset=utf-8" always;
+        add_header X-Content-Type-Options "nosniff" always;
         proxy_buffer_size 64k;
         proxy_buffers 8 64k;
         proxy_read_timeout 15s;
@@ -132,6 +167,7 @@ server {
         autoindex on;
         disable_symlinks on;
         autoindex_format json;
+        access_log off;
         limit_except GET { deny all; }
         add_header Cache-Control "no-store" always;
     }
