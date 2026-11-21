@@ -1,0 +1,14 @@
+{
+  "name": "glass-factory-evidence-kit",
+  "description": "Managed by the glass-factory evidence kit (see VERSION), do not edit in a project",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "playwright test",
+    "report": "node scripts/generate-report.mjs"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1"
+  }
+}

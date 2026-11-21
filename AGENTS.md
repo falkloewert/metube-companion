@@ -49,15 +49,16 @@ docker compose -f docker-compose.factory.yml down -v
 ### Evidence (Level 1): proof video and quality gate
 
 ```sh
-factory/run-evidence.sh        # exit 0 = PASS; --keep leaves the sandbox running, --out <dir> changes the target
+factory/evidence/run-evidence.sh   # exit 0 = PASS; --keep leaves the sandbox running, --out <dir> changes the target
 ```
 
-One command: own Compose project and ephemeral ports, unit checks (`node --check`, plus `node --test` for `tests/*.test.mjs` once they exist), `factory/smoke.sh`, then Playwright in the `evidence` container (same Docker network, reaches `http://web:8080` and `http://metube:8081` by service name; keep the service name `web`, Chromium forces HTTPS on `.app`/`.dev`), then `EVIDENCE.md` and the quality gate. Always tears down (`down -v`).
+One command: own Compose project and ephemeral ports, unit checks (`node --check`, plus `node --test` for `tests/*.test.mjs`), `factory/smoke.sh`, then Playwright in the `evidence` container (same Docker network, reaches `http://web:8080` and `http://metube:8081` by service name; keep the service name `web`, Chromium forces HTTPS on `.app`/`.dev`), then `EVIDENCE.md` and the quality gate. Always tears down (`down -v`).
 
-- Artifacts land in `factory/artifacts/` (git-ignored, wiped at each run): `EVIDENCE.md`, `quality-gate.json`, `videos/proof.mp4`, `preview/proof-preview.gif`, `screenshots/`, `proof-steps.json`, `smoke.log`.
-- Kit in `factory/evidence/`: `tests/companion-regression.spec.mjs` (fast regression, video only on failure) and `tests/proof-flow.spec.mjs` (the one proof video). Replace the steps of `proof-flow.spec.mjs` per ticket; keep one proof spec.
-- `scripts/sandbox.mjs` is the `test` every spec imports: it resets the mock before each test, serves `i.ytimg.com` thumbnails from `factory/mocks/metube/fixtures/thumbnail.jpg` and fails the test if any other request leaves the sandbox.
-- CI: `.github/workflows/level1-evidence.yml` runs this on every pull request, uploads the artifacts and posts the evidence comment. Its scope patterns are a copy of `factory/evidence/scripts/scope-classifier.mjs`; change both together.
+- The pipeline is the glass-factory evidence kit (`factory/evidence/`, header "managed by glass-factory kit", do not edit; update with `kit/evidence/install.sh <repo> --update` from a glass-factory checkout, reference in `factory/evidence/README.md`).
+- Project-owned: `factory/evidence.config.sh` (URLs, mock reset, thumbnail fixture, unit and smoke commands, scope patterns, timeouts), `factory/evidence/tests/` (`companion-regression.spec.mjs`: fast regression, video only on failure; `proof-flow.spec.mjs`: the one proof video, replace its steps per ticket), the compose file, `factory/mocks/`, `factory/smoke.sh`.
+- Artifacts land in `factory/artifacts/` (git-ignored, wiped at each run, only with the `.evidence-artifacts` marker): `EVIDENCE.md`, `quality-gate.json`, `videos/proof.mp4`, `preview/proof-preview.gif`, `screenshots/`, `proof-steps.json`, `smoke.log`.
+- Every spec imports `test` from `../scripts/sandbox.mjs`: it resets the mock before each test, serves `i.ytimg.com` thumbnails from `factory/mocks/metube/fixtures/thumbnail.jpg` and fails the test if any other request leaves the sandbox.
+- CI: `.github/workflows/level1-evidence.yml` is rendered by the installer from the config (scope patterns come from `SCOPE_*_RE` in `factory/evidence.config.sh`; change them there and run `install.sh --update`). It runs on every pull request, uploads the artifacts and posts the evidence comment (GIF first, MP4 linked through jsDelivr, plays on phones).
 
 ## Check before committing
 
