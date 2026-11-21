@@ -1,8 +1,9 @@
 # Site config, rendered at container start (envsubst): ${METUBE_UPSTREAM}
 # (host:port from METUBE_URL, see docker/16-metube-upstream.envsh) is MeTube, ${RETENTION_DAYS} and ${TRASH_DAYS} feed the "days left" hints in the UI,
 # ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf, ${COMPANION_TOKEN}
-# (optional) protects everything that touches MeTube or files. Downloads are
-# mounted at /downloads.
+# (optional) protects everything that touches MeTube or files,
+# ${YOUTUBE_WATCH_URL} is YouTube's watch page (a mock in the factory sandbox).
+# Downloads are mounted at /downloads.
 
 # CORS only for the extension (Firefox moz-extension://, Chromium
 # chrome-extension://). With "*" the browser would discard the response when
@@ -156,7 +157,7 @@ server {
         if ($auth_ok = 0) {
             return 401;
         }
-        proxy_pass https://www.youtube.com/watch?v=$yt_id;
+        proxy_pass ${YOUTUBE_WATCH_URL}$yt_id;
         proxy_ssl_server_name on;
         proxy_ssl_verify on;
         proxy_ssl_trusted_certificate /etc/ssl/certs/ca-certificates.crt;

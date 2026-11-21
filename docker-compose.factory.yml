@@ -1,0 +1,65 @@
+# Factory sandbox: the companion (built from this checkout) next to a mock
+# MeTube. No yt-dlp, no YouTube, no internet, no secrets; the mock simulates
+# downloads and writes small fixture files. See AGENTS.md, "Factory sandbox".
+#
+#   docker compose -f docker-compose.factory.yml up -d --build --wait
+#   factory/smoke.sh
+#   docker compose -f docker-compose.factory.yml down -v
+#
+# Parallel runs: set COMPOSE_PROJECT_NAME and FACTORY_WEB_PORT / FACTORY_MOCK_PORT.
+
+# Own project name: without it Compose would use the folder name
+# (metube-companion), which is also the project name of a real install, and
+# "up"/"down" would replace or remove its MeTube container.
+name: metube-companion-factory
+
+services:
+  metube:
+    image: node:24.22.0-alpine
+    command: ["node", "/mock/server.mjs"]
+    # Starts as root only to hand the download volume to PUID:PGID, then drops.
+    environment:
+      DOWNLOAD_DIR: /downloads
+      PUID: "1000"
+      PGID: "1000"
+      MOCK_TICK_MS: "${FACTORY_MOCK_TICK_MS:-250}"
+    volumes:
+      - ./factory/mocks/metube:/mock:ro
+      - downloads:/downloads
+    ports:
+      - "127.0.0.1:${FACTORY_MOCK_PORT:-18481}:8081"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8081/health"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks: [sandbox]
+
+  web:
+    build: .
+    user: "1000:1000"
+    depends_on:
+      metube:
+        condition: service_healthy
+    environment:
+      METUBE_URL: http://metube:8081
+      YOUTUBE_WATCH_URL: "http://metube:8081/watch?v="
+      RETENTION_DAYS: "0"
+      TRASH_DAYS: "7"
+      COMPANION_TOKEN: ""
+    volumes:
+      - downloads:/downloads
+    ports:
+      - "127.0.0.1:${FACTORY_WEB_PORT:-18480}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/history"]
+      interval: 2s
+      timeout: 2s
+      retries: 15
+    networks: [sandbox]
+
+volumes:
+  downloads:
+
+networks:
+  sandbox:
