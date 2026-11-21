@@ -147,7 +147,24 @@ function langFromWatchPage(html) {
   const asr = tracks.filter((t) => t.asr);
   if (asr.length === 1) return pick(asr[0].lang);
   const de = tracks.some((t) => !t.asr && t.lang.startsWith('de'));
-  return !de && tracks.some((t) => !t.asr && t.lang.startsWith('en')) ? 'en' : 'de';
+  const en = tracks.some((t) => !t.asr && t.lang.startsWith('en'));
+  if (de && en) return wordsLang(html);
+  return en ? 'en' : 'de';
+}
+
+// German and English manual captions, nothing else to go by (old videos
+// without an automatic track): one of them is a translation. Title and
+// description tell which language the uploader wrote in.
+// ponytail: stopword count, two languages only; replace when #15 brings any
+// language.
+function wordsLang(html) {
+  const details = html.slice(Math.max(0, html.indexOf('"videoDetails":')));
+  const field = (k) => ((details.match(new RegExp('"' + k + '":"((?:[^"\\\\]|\\\\.)*)"')) || [])[1] || '');
+  const text = (field('title') + ' ' + field('shortDescription')).toLowerCase();
+  const count = (words) => (text.match(new RegExp('\\b(?:' + words + ')\\b', 'g')) || []).length;
+  const de = count('der|die|das|und|ist|nicht|mit|ich|ein|eine|im|auf|wie|zu|den|von') + (/[äöüß]/.test(text) ? 2 : 0);
+  const en = count('the|and|is|not|with|i|a|an|in|on|how|to|of|at|me|my|this');
+  return en > de ? 'en' : 'de';
 }
 
 function friendlyError(msg) {

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Transcripts: old videos with both German and English manual captions (no automatic track) now get the uploader's language, judged from title and description; "Me at the zoo" was German before.
+
 ## 0.2.0 - 2026-11-21
 
 Note: deleting now moves files to the trash for 7 days; set `TRASH_DAYS: "0"` for the old behavior.
