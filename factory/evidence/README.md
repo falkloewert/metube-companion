@@ -37,7 +37,7 @@ Specs live in `factory/evidence/tests/`: `*regression.spec.mjs` (fast, video onl
 `proof-flow.spec.mjs` (the proof video). Every spec imports `test`, `expect`, `APP_URL`, `MOCK_URL`,
 `INSPECTOR_URL` from `../scripts/sandbox.mjs` and the step helpers from `../scripts/proof-helpers.mjs`.
 The auto fixture resets the project state before each test, routes fixtures, and fails the test if a request
-leaves the sandbox. Quality gate and report formats: see the skill `level1-evidence`.
+leaves the sandbox. The quality gate (`specs_use_sandbox_fixture`) fails if any spec imports `@playwright/test` (or `playwright`) directly. Quality gate and report formats: see the skill `level1-evidence`.
 
 ## Config reference (`factory/evidence.config.sh`)
 

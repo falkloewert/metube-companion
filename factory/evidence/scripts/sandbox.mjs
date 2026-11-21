@@ -1,4 +1,4 @@
-// managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 import fs from 'node:fs';
 import { test as base, expect } from '@playwright/test';
 
@@ -7,7 +7,7 @@ import { test as base, expect } from '@playwright/test';
  * The auto fixture `sandbox` runs before each test (like a beforeEach) and:
  * - sends the reset requests of the project (RESET_REQUESTS: mock state, test data back to the seed),
  * - routes the configured fixtures (ROUTED_FIXTURES: external hosts of the page -> local files),
- * - aborts every other request that is not the app, the mock or an ALLOWED_ORIGINS entry, and
+ * - aborts every other request that is not the app, the mock, the inspector or an ALLOWED_ORIGINS entry, and
  *   fails the test afterwards if one was attempted (nothing may leave the sandbox).
  * All values come from factory/evidence.config.sh via run-evidence.sh.
  */
@@ -45,7 +45,7 @@ const FIXTURES = list(process.env.ROUTED_FIXTURES).map((entry) => {
 });
 
 const ALLOWED_ORIGINS = new Set(
-  [APP_URL, MOCK_URL, ...list(process.env.ALLOWED_ORIGINS)].map((u) => new URL(u).origin)
+  [APP_URL, MOCK_URL, INSPECTOR_URL, ...list(process.env.ALLOWED_ORIGINS)].map((u) => new URL(u).origin)
 );
 
 export { expect };

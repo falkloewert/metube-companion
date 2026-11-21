@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+# managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 set -euo pipefail
 
 # Level 0 + Level 1 evidence run for a project's factory sandbox, inside isolated Docker containers:
@@ -161,14 +161,22 @@ trap cleanup EXIT
 WORKFLOW_FILE="$REPO_ROOT/.github/workflows/level1-evidence.yml"
 if [[ -f "$WORKFLOW_FILE" ]]; then
   for key in SCOPE_VERIFICATION_RE SCOPE_SENSITIVE_RE; do
-    grep -qF -- "$(evidence_json_str "${!key}")" "$WORKFLOW_FILE" \
-      || echo "[evidence] WARNING: $key in evidence.config.sh differs from .github/workflows/level1-evidence.yml; run install.sh <repo> --update" >&2
+    if ! grep -qF -- "$(evidence_json_str "${!key}")" "$WORKFLOW_FILE"; then
+      echo "[evidence] $key in evidence.config.sh differs from .github/workflows/level1-evidence.yml; run install.sh <repo> --update" >&2
+      # In CI the publish job would cross-check with other patterns than this run: do not go on.
+      [[ "${GITHUB_ACTIONS:-}" != "true" ]] || exit 2
+    fi
   done
 fi
 
 # Only wipe a folder this script created (marker) or an empty one.
 if [[ -d "$ARTIFACTS_DIR" && ! -f "$ARTIFACTS_DIR/.evidence-artifacts" ]] && [[ -n "$(ls -A "$ARTIFACTS_DIR")" ]]; then
   echo "[evidence] Error: $ARTIFACTS_DIR is not empty and is no evidence folder (.evidence-artifacts missing); refusing to wipe it" >&2
+  if [[ -z "$CUSTOM_OUT" ]]; then
+    echo "[evidence] This is probably output of an older pipeline (git-ignored, generated). Check it and delete it once: rm -rf \"$ARTIFACTS_DIR\"" >&2
+  else
+    echo "[evidence] Pass an empty folder to --out, or delete this one yourself." >&2
+  fi
   exit 2
 fi
 echo "[evidence] Preparing clean artifacts directory: $ARTIFACTS_DIR"
@@ -304,6 +312,8 @@ echo "[evidence] Checks: $T_PASS/$T_TOTAL passed, $T_FAIL failed, $T_SKIP skippe
 
 echo "[evidence] Running Level 1 Playwright evidence suite + deterministic quality gate..."
 evidence_container_env_args
+# Without unit and smoke cases the report says that checks are disabled, not that they are missing.
+[[ "$T_TOTAL" -gt 0 ]] || EVIDENCE_ENV_ARGS+=(-e UNIT_DISABLED=true)
 set +e
 LOCAL_UID="$(id -u)" LOCAL_GID="$(id -g)" \
   dc --profile evidence run -T --rm --build "${EVIDENCE_ENV_ARGS[@]}" -e EVIDENCE_OUT=/artifacts -e HOME=/tmp evidence

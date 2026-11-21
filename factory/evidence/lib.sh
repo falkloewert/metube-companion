@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+# managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 # Shared by run-evidence.sh and install.sh (and the kit self-test): loads factory/evidence.config.sh
 # on top of the kit defaults. Source it, do not execute it.
 
@@ -28,7 +28,7 @@ evidence_load_config() {
   SMOKE_CMD=""                                # optional, runs on the host from the repository root
   ENVIRONMENT_DESC=""                         # shown in the report: "Isolated ... Sandbox (<this>, 0 prod secrets)"
   SCOPE_VERIFICATION_RE='(^|[\/._-])(tests?|__tests__|specs?|mocks?|evidence)([\/._-]|$)|docker-compose|run-evidence\.sh'
-  SCOPE_SENSITIVE_RE='(^|[\/._-])(auth|security|migrations?|billing|payments?)([\/._-]|$)|Dockerfile|\.github\/workflows\/|\.env|secret'
+  SCOPE_SENSITIVE_RE='(^|[\/._-])(auth|security|migrations?|billing|payments?)([\/._-]|$)|Dockerfile|\.github\/workflows\/|\.env|secret|evidence\.config\.sh'
   SCOPE_SENSITIVE_LABEL="Sensitive paths (auth, migrations, CI, Docker, secrets)"
   SANDBOX_ENV=""                              # "KEY=value KEY2=value2" exported unless already set
   PW_TIMEOUT_MS="45000"

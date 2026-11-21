@@ -1,4 +1,4 @@
-# managed by glass-factory kit v1.0.0, rendered by install.sh from factory/evidence.config.sh: do not edit; change the config and run install.sh --update
+# managed by glass-factory kit v1.1.0 (d8ce937), rendered by install.sh from factory/evidence.config.sh: do not edit; change the config and run install.sh --update
 # Level 1 Evidence PR Workflow (rendered from the glass-factory kit template by install.sh)
 #
 # Runs factory/evidence/run-evidence.sh and publishes the proof on the pull request.

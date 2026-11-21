@@ -1,4 +1,4 @@
-// managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -10,6 +10,8 @@ const execFileAsync = promisify(execFile);
 const OUT_DIR = process.env.EVIDENCE_OUT || path.resolve('./artifacts');
 // Report wording from factory/evidence.config.sh (see README, "Config reference").
 const UNIT_LABEL = process.env.UNIT_LABEL || 'Unit Tests';
+// Set by run-evidence.sh when UNIT_RUNNER=none and there is no SMOKE_CMD.
+const UNIT_DISABLED = process.env.UNIT_DISABLED === 'true';
 const ENVIRONMENT_DESC = process.env.ENVIRONMENT_DESC || '';
 const SCOPE_SENSITIVE_LABEL = process.env.SCOPE_SENSITIVE_LABEL || 'Sensitive paths (auth, migrations, CI, Docker, secrets)';
 const RESULTS_FILE = path.join(OUT_DIR, 'results.json');
@@ -432,7 +434,9 @@ async function main() {
       : '';
   const unitSummaryLine = unit
     ? `**${unit.ok ? 'PASS' : 'FAIL'}** – **${unit.passed}/${unit.total} passed** (${unit.failed} failed${unitSkippedNote}, exit ${unit.exitCode}) in **${(unit.durationMs / 1000).toFixed(2)}s**`
-    : '*(not captured in standalone evidence run)*';
+    : UNIT_DISABLED
+      ? '*(disabled in evidence.config.sh: UNIT_RUNNER=none and no SMOKE_CMD)*'
+      : '*(not captured in standalone evidence run)*';
 
   const e2eSkippedNote = e2eSkipped > 0 ? `, ${e2eSkipped} skipped` : '';
   const e2eErrorNote = topLevelErrors.length > 0 ? `, ${topLevelErrors.length} suite errors` : '';

@@ -1,4 +1,4 @@
-// managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -182,6 +182,35 @@ async function auditRawTestOutputs(outDir, { requireResults, failOnFailures }) {
   return issues;
 }
 
+// Specs must import `test` from ../scripts/sandbox.mjs: a spec that imports Playwright directly runs
+// without the reset and the network fence. Comments are stripped so documentation can mention the package.
+const DIRECT_PLAYWRIGHT_IMPORT = /['"`](?:@playwright\/test|playwright|playwright-core)(?:\/[^'"`]*)?['"`]/;
+
+async function findDirectPlaywrightImports(testsDir) {
+  const offenders = [];
+  async function walk(dir) {
+    let entries = [];
+    try {
+      entries = await fs.readdir(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await walk(full);
+      } else if (/\.(mjs|cjs|js|mts|cts|ts)$/.test(entry.name)) {
+        const code = (await fs.readFile(full, 'utf-8'))
+          .replace(/\/\*[\s\S]*?\*\//g, '')
+          .replace(/(^|[^:])\/\/.*$/gm, '$1');
+        if (DIRECT_PLAYWRIGHT_IMPORT.test(code)) offenders.push(path.relative(testsDir, full));
+      }
+    }
+  }
+  await walk(testsDir);
+  return offenders.sort();
+}
+
 async function main() {
   const { outDir, strict } = parseArgs(process.argv.slice(2));
   // Step-pacing rules (instead of rigid total duration caps)
@@ -250,6 +279,16 @@ async function main() {
   } else {
     addCheck('sensitive_scope_disclosed', true, 'No sensitive or verification paths in changed-files.txt');
   }
+
+  // 2b. Every spec goes through the sandbox fixture (always enforced)
+  const directImports = await findDirectPlaywrightImports(path.resolve(process.env.TESTS_DIR || './tests'));
+  addCheck(
+    'specs_use_sandbox_fixture',
+    directImports.length === 0,
+    directImports.length === 0
+      ? 'All specs import test from scripts/sandbox.mjs (reset + network fence active)'
+      : `Specs import Playwright directly and bypass the sandbox fixture: ${directImports.join(', ')}`
+  );
 
   // 3. Anti-fake-green check: ALWAYS disallow skipped/cancelled/todo tests
   const testIssues = await auditRawTestOutputs(outDir, {

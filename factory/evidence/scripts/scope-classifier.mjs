@@ -1,4 +1,4 @@
-// managed by glass-factory kit v1.0.0, do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 /**
  * Deterministic classifier for PR/workspace changed files.
  * Shared between generate-report.mjs and quality-gate.mjs so rules never drift.
