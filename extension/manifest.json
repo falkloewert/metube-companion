@@ -1,0 +1,53 @@
+{
+  "manifest_version": 2,
+  "name": "MeTube Companion",
+  "version": "0.1.0",
+  "description": "Sends the current link with matching cookies to your own MeTube instance.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "metube-companion@falkloewert",
+      "strict_min_version": "140.0",
+      "data_collection_permissions": {
+        "required": ["authenticationInfo", "browsingActivity"]
+      }
+    },
+    "gecko_android": {
+      "strict_min_version": "142.0"
+    }
+  },
+  "permissions": [
+    "cookies",
+    "storage",
+    "downloads",
+    "alarms",
+    "activeTab",
+    "contextMenus",
+    "notifications",
+    "http://localhost:8081/*",
+    "https://*.youtube.com/*",
+    "https://*.google.com/*",
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
+  ],
+  "background": {
+    "scripts": ["shared.js", "background.js"],
+    "persistent": false
+  },
+  "browser_action": {
+    "default_title": "Send to MeTube",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon-48.png",
+      "96": "icon-96.png"
+    }
+  },
+  "icons": {
+    "48": "icon-48.png",
+    "96": "icon-96.png",
+    "128": "icon-128.png"
+  },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  }
+}

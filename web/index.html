@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#eef1f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0f1216" media="(prefers-color-scheme: dark)">
+  <title>MeTube Companion</title>
+  <link rel="icon" type="image/svg+xml" href='data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect width="48" height="48" rx="14" fill="%230b6bcb"/><path d="M24 13v16" stroke="%23fff" stroke-width="4" stroke-linecap="round"/><path d="M17 23l7 7 7-7" fill="none" stroke="%23fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><path d="M14 35h20" stroke="%23fff" stroke-width="4" stroke-linecap="round"/></svg>'>
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <link rel="stylesheet" href="shared.css">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="top">
+      <h1>MeTube Companion</h1>
+      <span id="conn" class="conn" aria-live="polite">Connected</span>
+    </header>
+
+    <section class="card composer">
+      <label class="sr-only" for="url">Link</label>
+      <div class="urlwrap">
+        <input id="url" type="url" inputmode="url" autocomplete="off" autocapitalize="off"
+               spellcheck="false" enterkeyhint="go" placeholder="Paste a link">
+        <button type="button" id="urlbtn" class="urlbtn" hidden></button>
+      </div>
+
+      <div class="tiles" id="tiles" role="group" aria-label="What to download">
+        <button type="button" class="tile" data-kind="video" aria-label="Download video">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/></svg>
+          <span class="name">Video</span>
+        </button>
+        <button type="button" class="tile" data-kind="audio" aria-label="Download audio">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>
+          <span class="name">Audio</span>
+        </button>
+        <button type="button" class="tile" data-kind="captions" aria-label="Download text">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h11M4 18h7"/></svg>
+          <span class="name">Text</span>
+        </button>
+      </div>
+
+      <p id="status" class="status" role="status" aria-live="polite"></p>
+    </section>
+
+    <section class="group" aria-labelledby="active-title" hidden>
+      <h2 id="active-title">Running</h2>
+      <ul id="active" class="list"></ul>
+    </section>
+
+    <section class="group" aria-labelledby="done-title">
+      <h2 id="done-title">History</h2>
+      <ul id="done" class="list"></ul>
+      <p id="done-empty" class="empty">Nothing downloaded yet. Files are deleted automatically after 30 days.</p>
+    </section>
+
+    <details class="card more">
+      <summary>Cookies</summary>
+      <p class="explain">Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.</p>
+      <div class="row">
+        <label class="btn ghost file">
+          <span>Choose file</span>
+          <input id="cookie-file" type="file" accept=".txt,text/plain">
+        </label>
+        <button type="button" class="btn ghost" id="cookie-delete" hidden>Remove</button>
+      </div>
+      <p id="cookie-status" class="explain" role="status" aria-live="polite"></p>
+    </details>
+
+    <details class="card more">
+      <summary>Extension and help</summary>
+      <p class="explain">The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox needs a Mozilla signature, see the <a href="https://github.com/falkloewert/metube-companion#readme" target="_blank" rel="noopener">project README</a>.</p>
+      <div class="row">
+        <a class="btn ghost" href="metube-companion-chromium.zip" download>Chromium extension</a>
+        <a class="btn ghost" href="metube-companion-firefox.xpi" download>Firefox extension</a>
+        <a class="btn ghost" href="https://github.com/falkloewert/metube-companion/issues/new" target="_blank" rel="noopener">Report a problem</a>
+      </div>
+    </details>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+  <script src="shared.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

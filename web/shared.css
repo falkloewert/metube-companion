@@ -1,0 +1,151 @@
+/* Shared design language of the web UI (web/) and the browser extension
+   (extension/popup.html): colors, tiles with double tap, format cells with
+   verb, text panel. Calm surfaces, blue-to-violet gradient only for active
+   things, green for done. No shadows. The extension gets this file at
+   build time (extension/build.sh). */
+
+:root {
+  color-scheme: light dark;
+  --bg: #eef1f5; --card: #fff; --line: #d9e0e9; --soft: #e8edf4;
+  --text: #16202b; --muted: #59677a; --accent: #0b6bcb; --accent-2: #6a5cff;
+  --ok: #178a4c; --ok-ink: #157a43; --link-ink: #0b6bcb; --bad: #b3261e; --on: #fff; --fill: #0b6bcb;
+  --spring: cubic-bezier(.3, 1.5, .6, 1); --out: cubic-bezier(.16, 1, .3, 1);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f1216; --card: #1b212a; --line: #2c3642; --soft: #252e3a;
+    --text: #e9eef5; --muted: #9daab8; --accent: #3d8bfd; --accent-2: #6c5ce7;
+    --bad: #ff6b63; --fill: #2563d6; --ok-ink: #4ade80; --link-ink: #7ab4ff;
+  }
+}
+
+/* Tiles: first tap selects, second tap sends. */
+.tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 12px; }
+.tile {
+  position: relative; overflow: hidden; height: 92px; border: 0; border-radius: 20px;
+  background: var(--soft); color: var(--muted); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px;
+  font-size: 14px; font-weight: 600; -webkit-tap-highlight-color: transparent;
+  transition: transform .2s var(--out), background .25s, color .25s, opacity .25s;
+}
+.tile svg { width: 26px; height: 26px; }
+.tile:hover { color: var(--text); }
+.tile:active { transform: scale(.94); }
+.tiles.armed .tile:not(.armed), .tiles.sending .tile:not(.busy):not(.done):not(.fail) { opacity: .5; }
+.tiles.sending .tile { pointer-events: none; }
+.tile.armed, .tile.busy {
+  background-color: var(--fill); background-image: linear-gradient(135deg, var(--fill), var(--accent-2)); color: var(--on);
+}
+.tile.armed { transform: scale(1.04); transition-timing-function: var(--spring); }
+.tile .ico, .tile .spin, .tile .check { position: relative; z-index: 1; }
+.tile .spin, .tile .check, .tile .ask, .tile .busytxt, .tile .donetxt { display: none; }
+.tile.armed .ask { display: block; font-size: 12px; font-weight: 500; line-height: 1; margin-bottom: 6px; }
+.tile.armed::after {
+  content: ""; position: absolute; left: 18px; right: 18px; bottom: 8px; height: 3px; border-radius: 2px;
+  background: rgba(255,255,255,.7); transform-origin: left; animation: countdown 4s linear forwards;
+}
+.tile.busy .ico, .tile.busy .name { display: none; }
+.tile.busy .spin { display: block; animation: spin .75s linear infinite; }
+.tile.busy .busytxt { display: block; }
+.tile.done { background-image: none; background-color: var(--ok); color: var(--on); animation: pop .45s var(--spring); }
+.tile.done .ico, .tile.done .name { display: none; }
+.tile.done .check, .tile.done .donetxt { display: block; }
+.tile.done .check path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .3s .05s var(--out) forwards; }
+.tile.fail { animation: shake .35s; background-image: none; background-color: var(--bad); color: var(--on); }
+.burst { position: absolute; left: 50%; top: 38%; border-radius: 50%; background: var(--on); opacity: 0; pointer-events: none; z-index: 0; }
+.tile.done .burst { animation: burst .55s var(--out) forwards; }
+
+/* Formats per video. Each cell says with a verb what a tap does:
+   "save" (exists), "request" (missing, one tap is enough), "loading …",
+   "retry" (failed), "waiting" (another job is running). */
+.formats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+.item.running .formats { display: none; }
+.fmt {
+  position: relative; overflow: hidden; height: 62px; border: 0; border-radius: 14px; cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+  background: var(--soft); color: var(--text); font-size: 12px; font-weight: 600; line-height: 1.2;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .15s var(--out), background .2s, color .2s, box-shadow .2s;
+}
+.fmt svg { width: 19px; height: 19px; margin-bottom: 2px; }
+.fmt .spin, .fmt .tick { display: none; }
+.fmt:active { transform: scale(.93); }
+.fmt .verb { font-size: 10.5px; font-weight: 500; opacity: .85; }
+.fmt[data-state="have"] { color: var(--ok-ink); background: color-mix(in srgb, var(--ok-ink) 13%, transparent); }
+.fmt[data-state="have"]:hover, .fmt.open { background: var(--ok); color: var(--on); }
+.fmt[data-state="missing"], .fmt[data-state="blocked"] {
+  background: transparent; color: var(--muted);
+  box-shadow: inset 0 0 0 1.5px var(--line);
+}
+.fmt[data-state="missing"] .verb { color: var(--link-ink); opacity: 1; }
+.fmt[data-state="missing"]:hover { color: var(--text); box-shadow: inset 0 0 0 1.5px var(--accent); }
+.fmt[data-state="blocked"] { opacity: .45; pointer-events: none; }
+.fmt[data-state="fail"] { background: color-mix(in srgb, var(--bad) 12%, transparent); color: var(--bad); }
+.fmt[data-state="busy"] { color: var(--link-ink); pointer-events: none; }
+.fmt[data-state="busy"] svg:not(.spin) { display: none; }
+.fmt[data-state="busy"] .spin { display: block; animation: spin .75s linear infinite; }
+/* Progress of the running format right in the cell */
+.fmt[data-state="busy"].wait::before { width: 35%; animation: slide 1.3s ease-in-out infinite; }
+.fmt[data-state="busy"] { background: color-mix(in srgb, var(--link-ink) 9%, transparent); }
+.fmt[data-state="busy"]::before, .fmt.finishing::before {
+  content: ""; position: absolute; left: 0; bottom: 0; height: 6px; width: var(--p, 0%);
+  background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .6s var(--out);
+}
+/* At the end the bar visibly fills up, only then the cell turns green. */
+.fmt.finishing::before { animation: finish .45s var(--out) forwards; }
+@keyframes finish { to { width: 100%; } }
+.fmt.flash { background: var(--ok); color: var(--on); animation: pop .35s var(--spring); }
+.fmt.flash svg:not(.tick) { display: none; }
+.fmt.flash .tick { display: block; }
+.fmt.flash .tick path { stroke-dasharray: 1; stroke-dashoffset: 1; animation: draw .3s var(--out) forwards; }
+
+/* Text: preview with copy and .md right below the text cell */
+.textpanel {
+  position: relative; margin-top: 10px; padding: 12px; border-radius: 14px;
+  background: color-mix(in srgb, var(--ok-ink) 8%, var(--soft)); animation: rise .25s var(--out);
+}
+.textpanel[hidden] { display: none; }
+/* small arrow below the text cell (third of four columns) */
+.textpanel::before {
+  content: ""; position: absolute; top: -6px; left: calc(62.5% - 6px); width: 12px; height: 12px;
+  background: inherit; transform: rotate(45deg); border-radius: 2px;
+}
+.tp-head { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 6px; }
+.preview {
+  margin: 0; font-size: 13px; line-height: 1.5; color: var(--text);
+  display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;
+}
+.preview.loading { color: var(--muted); }
+.tp-actions { display: flex; gap: 8px; margin-top: 10px; }
+.pill {
+  flex: 1; height: 40px; border: 0; border-radius: 12px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  background: var(--card); color: var(--text); font: inherit; font-size: 13px; font-weight: 600;
+  transition: transform .15s, background .2s, color .2s;
+}
+.pill svg { width: 18px; height: 18px; }
+.pill:hover { background: var(--accent); color: var(--on); }
+.pill:active { transform: scale(.95); }
+.pill .tick { display: none; }
+.pill.flash { background: var(--ok); color: var(--on); }
+.pill.flash svg:not(.tick) { display: none; }
+.pill.flash .tick { display: block; }
+.kind.thumb { width: 64px; height: 40px; overflow: hidden; background: var(--soft); }
+.kind.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+@keyframes countdown { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes pop { 0% { transform: scale(.9); } 60% { transform: scale(1.04); } 100% { transform: scale(1); } }
+@keyframes draw { to { stroke-dashoffset: 0; } }
+@keyframes shake { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+@keyframes rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+@keyframes shimmer { to { transform: translateX(100%); } }
+@keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(250%); } }
+@keyframes burst {
+  0% { opacity: .9; transform: translate(-50%, -50%) rotate(var(--a)) translateY(0) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) rotate(var(--a)) translateY(var(--d)) scale(.3); }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .tile.done .check path, .act.flash .tick path, .fmt.flash .tick path, .pill.flash .tick path { stroke-dashoffset: 0; }
+}

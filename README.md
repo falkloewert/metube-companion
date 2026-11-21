@@ -20,3 +20,9 @@ MeTube Companion has **no login**. Run it on your home network or behind a VPN o
 ## License
 
 [MIT](LICENSE)
+
+## Repository layout
+
+- `web/`: the web UI (static files, PWA). `shared.js` and `shared.css` are shared with the extension.
+- `extension/`: browser extension for Chromium and Firefox. `./build.sh` writes the packages to `extension/dist/`.
+- `nginx/default.conf`: the sidecar config (static UI, `/api/` and `/ext/` proxy to MeTube, file list, YouTube page proxy).

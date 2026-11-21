@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>MeTube Companion</title>
+  <!-- Colors, tiles, format cells and text panel are shared with the web UI
+       (web/shared.css, added to the package at build time). -->
+  <link rel="stylesheet" href="shared.css">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; width: 320px; padding: 12px;
+      font: 14px/1.4 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg); color: var(--text);
+    }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 22px; padding: 12px; }
+    .sr { position: absolute; left: -9999px; }
+    svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    button { font: inherit; color: inherit; }
+    button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    #url {
+      width: 100%; height: 42px; padding: 0 14px; border: 0; border-radius: 999px;
+      background: var(--soft); color: inherit; font: inherit; font-size: 13px; outline: none;
+      transition: box-shadow .2s;
+    }
+    #url:focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+    #url.shake { animation: shake .35s; }
+
+    /* Tiles from shared.css, a bit smaller in the popup */
+    .tiles { gap: 8px; margin-top: 10px; }
+    .tile { height: 76px; border-radius: 18px; font-size: 13px; gap: 4px; }
+    .tile svg { width: 22px; height: 22px; }
+    .tile.armed .ask { font-size: 11px; }
+
+    #status { margin: 10px 4px 0; font-size: 12px; color: var(--muted); }
+    #status:empty { display: none; }
+    #status.err { color: var(--bad); }
+
+    /* Last video: header, format bar, text panel */
+    #job { margin-top: 12px; border-top: 1px solid var(--line); padding-top: 12px; animation: rise .35s var(--out); }
+    .jobhead { display: flex; gap: 10px; align-items: flex-start; }
+    .kind {
+      flex: none; width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+      background: var(--soft); color: var(--accent); overflow: hidden;
+    }
+    .kind svg { width: 18px; height: 18px; }
+    .kind.thumb { width: 58px; }
+    .kind.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    #job.error .kind { color: var(--bad); }
+    .jobtext { min-width: 0; flex: 1; }
+    #jobtitle {
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+      font-size: 13px; font-weight: 600; color: inherit; text-decoration: none; cursor: pointer;
+    }
+    #jobtitle:hover { text-decoration: underline; }
+    #jobmeta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    #job.error #jobmeta { color: var(--bad); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+    .formats { margin-top: 10px; gap: 5px; }
+    .fmt { height: 58px; border-radius: 12px; font-size: 11.5px; }
+    .fmt .verb { font-size: 10px; }
+    .textpanel { padding: 10px; }
+    .preview { font-size: 12px; -webkit-line-clamp: 5; }
+    .pill { height: 36px; font-size: 12px; }
+
+    .foot { display: flex; gap: 14px; align-items: center; margin: 8px 6px 0; font-size: 12px; color: var(--muted); }
+    .foot a { color: var(--muted); display: inline-flex; gap: 5px; align-items: center; text-decoration: none; }
+    .foot a:hover { color: var(--text); }
+    .foot svg { width: 15px; height: 15px; }
+    #ver { margin-left: auto; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <label for="url" class="sr">Link</label>
+    <input id="url" type="url" placeholder="Paste a link" autocomplete="off" spellcheck="false">
+
+    <div class="tiles" id="tiles" role="group" aria-label="What to download">
+      <button class="tile" data-kind="video" aria-label="Download video"><span class="name">Video</span></button>
+      <button class="tile" data-kind="audio" aria-label="Download audio"><span class="name">Audio</span></button>
+      <button class="tile" data-kind="captions" aria-label="Download text"><span class="name">Text</span></button>
+    </div>
+
+    <p id="status" role="status" aria-live="polite"></p>
+
+    <div id="job" hidden>
+      <div class="jobhead">
+        <div class="kind" id="jobkind" aria-hidden="true"></div>
+        <div class="jobtext">
+          <a id="jobtitle" href="#" title="Open original"></a>
+          <div id="jobmeta"></div>
+        </div>
+      </div>
+      <div class="formats" id="formats" role="group" aria-label="Formats"></div>
+      <div class="textpanel" id="textpanel" hidden>
+        <div class="tp-head"></div>
+        <p class="preview"></p>
+        <div class="tp-actions">
+          <button type="button" class="pill" id="copy">Copy all</button>
+          <button type="button" class="pill" id="md">As .md</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="foot">
+    <a href="#" id="options"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Instance</a>
+    <a href="#" id="home" title="All downloads on the MeTube page"><svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>All downloads</a>
+    <span id="ver"></span>
+  </div>
+  <script src="compat.js"></script>
+  <script src="shared.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>
