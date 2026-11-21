@@ -28,7 +28,9 @@ Usage: factory/run-evidence.sh [--keep] [--out <dir>]
 
 Options:
   --keep        Keep the sandbox containers running (loopback ports are printed at the end)
-  --out <dir>   Write evidence artifacts to <dir> instead of factory/artifacts
+  --out <dir>   Write evidence artifacts to <dir> instead of factory/artifacts.
+                The folder is wiped on every run, so it must be empty or a
+                previous evidence folder (marker file .evidence-artifacts).
   -h, --help    Show this help message
 EOF
 }
@@ -63,9 +65,6 @@ done
 if [[ -n "$CUSTOM_OUT" ]]; then
   mkdir -p "$CUSTOM_OUT"
   ARTIFACTS_DIR="$(cd "$CUSTOM_OUT" && pwd)"
-elif [[ -n "${ARTIFACTS_DIR:-}" ]]; then
-  mkdir -p "$ARTIFACTS_DIR"
-  ARTIFACTS_DIR="$(cd "$ARTIFACTS_DIR" && pwd)"
 else
   ARTIFACTS_DIR="$SCRIPT_DIR/artifacts"
 fi
@@ -126,9 +125,15 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Only wipe a folder this script created (marker) or an empty one.
+if [[ -d "$ARTIFACTS_DIR" && ! -f "$ARTIFACTS_DIR/.evidence-artifacts" ]] && [[ -n "$(ls -A "$ARTIFACTS_DIR")" ]]; then
+  echo "[evidence] Error: $ARTIFACTS_DIR is not empty and is no evidence folder (.evidence-artifacts missing); refusing to wipe it" >&2
+  exit 2
+fi
 echo "[evidence] Preparing clean artifacts directory: $ARTIFACTS_DIR"
 rm -rf "$ARTIFACTS_DIR"
 mkdir -p "$ARTIFACTS_DIR"
+touch "$ARTIFACTS_DIR/.evidence-artifacts"
 
 # Collect changed files for deterministic Scope & Verification Integrity checks.
 # Includes BOTH committed feature-branch diffs (relative to base ref) AND uncommitted/untracked files.
@@ -180,8 +185,8 @@ tap_case() { # <ok|not ok> <title, may carry "# SKIP" / "# TODO">
 NODE_IMAGE="$(sed -n 's/^[[:space:]]*image:[[:space:]]*\(node:[^[:space:]]*\).*/\1/p' "$COMPOSE_FILE" | head -n 1)"
 run_node() { docker run --rm --network none -v "$REPO_ROOT:/repo:ro" -w /repo "$NODE_IMAGE" "$@"; }
 
-echo "[evidence] Unit check: node --check web/*.js extension/*.js ($NODE_IMAGE)..."
-SYNTAX_OUT="$(run_node sh -c 'for f in web/*.js extension/*.js; do if node --check "$f" 2>&1; then echo "OK $f"; else echo "FAIL $f"; fi; done' 2>&1 || true)"
+echo "[evidence] Unit check: node --check web/*.js web/i18n/*.js extension/*.js ($NODE_IMAGE)..."
+SYNTAX_OUT="$(run_node sh -c 'for f in web/*.js web/i18n/*.js extension/*.js; do if node --check "$f" 2>&1; then echo "OK $f"; else echo "FAIL $f"; fi; done' 2>&1 || true)"
 SYNTAX_SEEN=0
 while IFS= read -r line; do
   case "$line" in
