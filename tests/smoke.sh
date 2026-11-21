@@ -34,11 +34,10 @@ if [ "$IMAGE" = "metube-companion:smoke" ]; then
 fi
 
 sed -e "s#ghcr.io/falkloewert/metube-companion:latest#$IMAGE#" \
-    -e "s#127.0.0.1:8081:8080#127.0.0.1:$PORT:8080#" \
     -e 's#RETENTION_DAYS: "0"#RETENTION_DAYS: "${RETENTION_DAYS:-0}"\n      COMPANION_TOKEN: "${COMPANION_TOKEN:-}"#' \
     compose.desktop.yml > "$WORK/compose.yml"
 mkdir -p "$WORK/downloads"
-export METUBE_DOWNLOADS="$WORK/downloads" PUID="$(id -u)" PGID="$(id -g)"
+export METUBE_DOWNLOADS="$WORK/downloads" PUID="$(id -u)" PGID="$(id -g)" COMPANION_PORT="$PORT"
 up() { docker compose -p "$P" -f "$WORK/compose.yml" up -d "$@" >/dev/null 2>&1; }
 wait_up() {
   i=0; until [ "$(code "$B/healthz")" = 200 ]; do i=$((i + 1)); [ $i -gt 60 ] && return 1; sleep 1; done

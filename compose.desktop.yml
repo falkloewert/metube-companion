@@ -9,8 +9,8 @@
 #
 # Also fits a server without MeTube: put these lines into a .env file next to
 # this file (see INSTALL.md 4.2) instead of editing it.
-#   BIND=0.0.0.0              # reachable from other devices (no login!)
-#   PORT=8081
+#   COMPANION_BIND=0.0.0.0    # reachable from other devices (no login!)
+#   COMPANION_PORT=8081
 #   TZ=Europe/Berlin
 #   YTDL_UPDATE_TIME=04:00
 
@@ -67,7 +67,7 @@ services:
       # other devices can reach this instance.
       # COMPANION_TOKEN: "change-me-to-a-long-random-string"
     ports:
-      - "${BIND:-127.0.0.1}:${PORT:-8081}:8080"
+      - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8081}:8080"
     volumes:
       - "${METUBE_DOWNLOADS:-./downloads}:/downloads"
 

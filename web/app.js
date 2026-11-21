@@ -198,16 +198,48 @@ async function loadListings(done) {
 
 // Stem per URL (localStorage) as fallback when the last job has no file;
 // the actual search lives in shared.js.
-function siblingsOf(item) {
+function siblingsOf(item, remember = true) {
+  if (item.orphan) return item.orphan;
   let base = null;
   if (item.filename) {
     const [dir, name] = splitPath(relPath(item.filename));
     base = (dir ? dir + '/' : '') + stem(name);
-    rememberStem(item.url, base);
+    if (remember) rememberStem(item.url, base);
   } else {
     base = stems[item.url] || null;
   }
   return siblings(item, listings, base);
+}
+
+// Files without a history entry (older MeTube installs, a fresh MeTube state,
+// files copied in by hand): one card per video, grouped by [<YouTube id>] or
+// name stem. With an ID the card acts like a normal one (request works).
+// claimed: files of history entries; titles: history entries whose files
+// were not found otherwise (no stem in this browser). While jobs run, new
+// files wait for their history entry.
+// ponytail: only folders already listed (root and those of history entries),
+// list subfolders too if users keep orphans deeper. "[...11 chars]" is taken
+// as a YouTube ID even when it is not one.
+function orphans(claimed, titles, busy) {
+  const groups = new Map();
+  for (const [dir, names] of listings) {
+    for (const [name, mtime] of names) {
+      const rel = (dir ? dir + '/' : '') + name;
+      const kind = Object.keys(byKind([rel]))[0];
+      const s = stem(name);
+      if (name.startsWith('.') || claimed.has(rel) || !kind || titles.has(s)) continue;
+      if (busy && Date.now() - mtime < 60000) continue;
+      const id = (s.match(/\[([\w-]{11})\]$/) || [])[1];
+      const key = id ? 'https://www.youtube.com/watch?v=' + id : 'file:' + (dir ? dir + '/' : '') + s;
+      if (!groups.has(key)) {
+        groups.set(key, { url: key, title: s.replace(/\s*\[[\w-]{11}\]$/, ''), status: 'finished', filename: rel, download_type: kind, orphan: [], at: 0 });
+      }
+      const g = groups.get(key);
+      g.orphan.push(rel);
+      g.at = Math.max(g.at, mtime || 0);
+    }
+  }
+  return [...groups.values()].sort((a, b) => b.at - a.at);
 }
 
 // MeTube deletes only the last job's file; nginx removes the other formats
@@ -390,6 +422,12 @@ function makeNode() {
     clearTimeout(n.delTimer);
     b.del.disabled = true;
     try {
+      if (n.item.orphan) {
+        if ((await deleteFiles(n.item.orphan)).includes(false)) throw new Error('not all formats could be deleted.');
+        listingsAt = 0;
+        toast('Deleted.');
+        return;
+      }
       const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: true });
       if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
       if (n.where === 'done') {
@@ -479,6 +517,8 @@ function update(n, item, where) {
   if (failed) b.report.href = reportUrl(item, 'web');
   b.del.title = running ? 'Cancel' : 'Delete, with all formats';
   if (!n.files.captions && !n.panel.hidden) toggleTextPanel(n.panel, cells.captions, false);
+  // Without a link there is nothing to request from.
+  Object.values(cells).forEach((c) => { c.hidden = !web && !!item.orphan && c.dataset.state === 'missing'; });
 
   const show = { report: failed, open: !running && web, del: true };
   Object.keys(show).forEach((k) => { b[k].hidden = !show[k]; });
@@ -529,6 +569,12 @@ async function doRefresh() {
       if (!jobs.has(i.url)) jobs.set(i.url, new Map());
       jobs.get(i.url).set(i.download_type || 'video', i);
     });
+    // A YouTube job claims no files here: its orphan card (same URL) shows the
+    // job in the cell, like any other card.
+    const claimed = new Set(done.concat(queue.filter((i) => !ytId(i.url))).flatMap((i) => siblingsOf(i, false)));
+    const titles = new Set(done.filter((i) => !siblingsOf(i, false).length).map(itemTitle));
+    const orph = orphans(claimed, titles, queue.length > 0);
+    orph.forEach((i) => known.add(i.url));
     // New videos appear under "Running", further formats of a known video run
     // inside its card.
     const fresh = queue.filter((i) => !known.has(i.url));
@@ -544,14 +590,15 @@ async function doRefresh() {
       return n.li;
     });
     place(el.active, build(fresh, 'queue'));
-    place(el.done, build(done, 'done'));
+    place(el.done, build(done.concat(orph), 'done'));
     wasQueued = new Set(queue.map((i) => i.url));
     for (const [key, n] of nodes) if (!seen.has(key)) { n.li.remove(); nodes.delete(key); }
     el.active.closest('section').hidden = fresh.length === 0;
-    el.doneEmpty.hidden = done.length > 0;
+    el.doneEmpty.hidden = el.done.children.length > 0;
     lastDone = done;
-    clear.btn.hidden = done.length === 0;
-    if (!done.length) clear.bar.hidden = true;
+    lastOrphans = orph;
+    clear.btn.hidden = !done.length && !orph.length;
+    if (clear.btn.hidden) clear.bar.hidden = true;
   } catch (e) {
     setConn(false);
     if (e.message) el.conn.title = e.message;
@@ -560,14 +607,21 @@ async function doRefresh() {
 
 // ---- Clear all ---------------------------------------------------------------
 // Removes every finished entry from the history, optionally with all files of
-// all formats. Running jobs are left alone.
+// all formats. Running jobs are left alone. Files without a history entry
+// go only with "Delete files too".
 
 const clear = { btn: $('clearall'), bar: $('clearbar'), q: $('clearq') };
 let lastDone = [];
+let lastOrphans = [];
 
 clear.btn.addEventListener('click', () => {
   const n = lastDone.length;
-  clear.q.textContent = 'Clear ' + n + (n === 1 ? ' entry' : ' entries') + ' from the history?';
+  const o = lastOrphans.length;
+  const entries = (k) => k + (k === 1 ? ' entry' : ' entries');
+  clear.q.textContent = n
+    ? 'Clear ' + entries(n) + ' from the history?' + (o ? ' "Delete files too" also deletes ' + entries(o) + ' without history.' : '')
+    : 'Delete the files of ' + entries(o) + ' without history?';
+  $('clear-history').hidden = !n;
   clear.bar.hidden = false;
   $('clear-cancel').focus();
 });
@@ -575,19 +629,22 @@ $('clear-cancel').addEventListener('click', () => { clear.bar.hidden = true; });
 
 async function clearAll(withFiles) {
   const items = lastDone.slice();
+  const extra = withFiles ? lastOrphans.flatMap((i) => i.orphan) : [];
   const buttons = clear.bar.querySelectorAll('button');
   buttons.forEach((x) => { x.disabled = true; });
   try {
     listingsAt = 0;
     await loadListings(items);
-    const files = withFiles ? items.flatMap((i) => siblingsOf(i)) : [];
-    const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles });
-    if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+    const files = withFiles ? items.flatMap((i) => siblingsOf(i)).concat(extra) : [];
+    if (items.length) {
+      const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles });
+      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+    }
     const gone = withFiles ? await deleteFiles(files) : [];
     items.forEach((i) => { delete stems[i.url]; });
     saveStems();
     if (gone.includes(false)) throw new Error('some files could not be deleted.');
-    toast(withFiles ? 'History and files deleted.' : 'History cleared, files kept.');
+    toast(withFiles ? 'History and files deleted.' : 'History cleared. The files stay and are still listed.');
     clear.bar.hidden = true;
   } catch (e) {
     toast('That did not work: ' + e.message, true);

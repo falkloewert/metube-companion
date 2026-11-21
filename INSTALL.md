@@ -55,15 +55,15 @@ curl -O https://raw.githubusercontent.com/falkloewert/metube-companion/main/comp
 docker compose -f compose.desktop.yml up -d
 ```
 
-Apply the decisions in `.env`: `PORT` (6), `PUID`/`PGID` (7), `TZ` and `YTDL_UPDATE_TIME` (10). Edit `compose.desktop.yml` only for `RETENTION_DAYS` (4), `COMPANION_TOKEN` (5) and the optional `updater` service (10).
+Apply the decisions in `.env`: `COMPANION_PORT` (6), `PUID`/`PGID` (7), `TZ` and `YTDL_UPDATE_TIME` (10). Edit `compose.desktop.yml` only for `RETENTION_DAYS` (4), `COMPANION_TOKEN` (5) and the optional `updater` service (10).
 
 ### 4.2 Server or NAS
 
 - **MeTube already runs:** copy the `companion` service from `compose.server.yml` into the compose file that runs MeTube (same file, so `http://metube:8081` resolves). Add the four MeTube settings marked *required* there: `OUTPUT_TEMPLATE`, `YTDL_OPTIONS_PRESETS`, `TEMP_DIR`, `DELETE_FILE_ON_TRASHCAN`, plus the recommended `YTDL_NIGHTLY_UPDATE_TIME` and `TZ` (10). **Merge, do not replace:** if MeTube already has `YTDL_OPTIONS_PRESETS` or a custom `OUTPUT_TEMPLATE`, combine them (keep `[%(id)s]` in the file name, add the `text` preset). The companion expects files directly in the download folder or in subfolders of it; a separate `AUDIO_DOWNLOAD_DIR` outside it is not supported. If the MeTube service is not called `metube` or runs elsewhere, set `METUBE_URL` (e.g. `http://192.168.1.10:8081`). Mount the same download folder into both at `/downloads`. Set `user:` (7), `RETENTION_DAYS` (4, mind that it also deletes older existing files) and optionally `COMPANION_TOKEN` (5).
 - **No MeTube yet:** use `compose.desktop.yml` unchanged and put a `.env` file next to it:
   ```sh
-  BIND=0.0.0.0              # other devices can reach it (keep decision 5 in mind)
-  PORT=8081
+  COMPANION_BIND=0.0.0.0    # other devices can reach it (keep decision 5 in mind)
+  COMPANION_PORT=8081
   TZ=Europe/Berlin          # your time zone
   YTDL_UPDATE_TIME=04:00    # daily yt-dlp update at a quiet hour
   METUBE_DOWNLOADS=/path/to/downloads
@@ -71,7 +71,7 @@ Apply the decisions in `.env`: `PORT` (6), `PUID`/`PGID` (7), `TZ` and `YTDL_UPD
   PGID=1000
   ```
   Then `docker compose -f compose.desktop.yml up -d`.
-- **Replacing an existing MeTube setup** with the bundled one (same download folder): the web UI lists what is in MeTube's history, not every file in the folder. With a fresh MeTube state, older files stay in the folder but do not show up (and `RETENTION_DAYS` still deletes them). To keep them visible, stop MeTube once and copy the old `completed.json` from the old state folder (`STATE_DIR`, or `.metube` in the download folder) into the new one. Leave `cookies.txt` behind if the extension should send fresh cookies.
+- **Replacing an existing MeTube setup** with the bundled one (same download folder): older files without a history entry show up as cards with save and delete (requesting more formats needs the YouTube ID in the file name). `RETENTION_DAYS` applies to them too. Leave `cookies.txt` behind if the extension should send fresh cookies.
 - **Behind a reverse proxy:** point it at the companion, not at MeTube: container port `8080` (for example `metube-companion:8080` on a shared Docker network) or the published host port. `/healthz` answers `ok` and suits uptime monitors.
 
 Existing MeTube files without the video ID in their name still work, but are grouped by title only.
