@@ -16,7 +16,8 @@ code() { curl -s -o /dev/null -w '%{http_code}' "$@"; }
 check() { want=$1; label=$2; shift 2; got=$(code "$@"); [ "$got" = "$want" ] && ok "$label ($got)" || bad "$label: want $want, got $got"; }
 post() { curl -s -X POST -H 'Content-Type: application/json' "$B/api/$1" -d "$2"; }
 
-curl -s -X POST "$M/_mock/reset" >/dev/null
+# Refuse to run against anything that is not the mock (e.g. a real MeTube).
+curl -fsS -X POST "$M/_mock/reset" | grep -q '"ok"' || { echo "no mock MeTube at $M"; exit 1; }
 
 echo "endpoints"
 check 200 "web UI" "$B/"
@@ -41,10 +42,22 @@ curl -s "$B/files/" | grep -q 'Sintel.*\.mp3' && ok "file appears in listing" ||
 F=$(curl -s "$B/files/" | grep -o 'Sintel[^"]*\.mp3' | head -1)
 check 204 "delete the file" -X DELETE "$B/files/$(printf %s "$F" | sed 's/ /%20/g; s/\[/%5B/g; s/\]/%5D/g')"
 
+echo "cancel stops a running job"
+U2='https://www.youtube.com/watch?v=aqz-KE-bpKQ'
+post add "{\"url\":\"$U2\",\"download_type\":\"audio\",\"format\":\"opus\",\"quality\":\"best\"}" >/dev/null
+post delete "{\"ids\":[\"$U2\"],\"where\":\"queue\"}" >/dev/null
+sleep 3
+curl -s "$B/files/" | grep -q 'Bunny[^"]*\.opus' && bad "cancelled job still wrote a file" || ok "cancelled job wrote no file"
+
 echo "failure paths"
 post add '{"url":"https://www.youtube.com/watch?v=xxxxxxxxxxx","download_type":"video","format":"any","quality":"best"}' >/dev/null
 i=0; until curl -s "$B/api/history" | grep -q 'This video is unavailable'; do i=$((i + 1)); [ $i -gt 20 ] && break; sleep 0.25; done
 curl -s "$B/api/history" | grep -q 'This video is unavailable' && ok "unknown video fails" || bad "unknown video fails"
+post retry '{"id":"https://www.youtube.com/watch?v=xxxxxxxxxxx"}' >/dev/null
+sleep 1.5
+curl -s "$B/files/" | grep -q 'xxxxxxxxxxx' && bad "retry of unknown video wrote a file" || ok "retry of unknown video fails again"
+check 400 "bad request does not crash the mock" "$M/download/%zz"
+check 200 "mock still up" "$M/health"
 curl -s "$M/_mock/events" | grep -q '"/add"' && ok "mock recorded the requests" || bad "mock recorded the requests"
 
 echo

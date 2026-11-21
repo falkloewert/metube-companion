@@ -15,6 +15,12 @@ const TICK_MS = Number(process.env.MOCK_TICK_MS || 250);
 const FIXTURES = new URL('./fixtures/', import.meta.url);
 if (!DIR) throw new Error('DOWNLOAD_DIR is required');
 
+// Never wipe a folder this mock did not create (e.g. a real downloads mount).
+const MARKER = path.join(DIR, '.factory-sandbox');
+if (!fs.existsSync(MARKER) && fs.readdirSync(DIR).length) {
+  throw new Error(`${DIR} is not empty and has no .factory-sandbox marker; refusing to use it`);
+}
+
 // Same owner as the companion, so it can delete and move what we write.
 const uid = Number(process.env.PUID || 1000);
 const gid = Number(process.env.PGID || 1000);
@@ -46,7 +52,19 @@ let done = [];
 let events = [];
 let hasCookies = false;
 let attempts = {};
-let timers = [];
+let timers = new Map(); // history entry -> its pending simulation steps
+
+function schedule(item, fn, ms) {
+  if (!timers.has(item)) timers.set(item, []);
+  timers.get(item).push(setTimeout(fn, ms));
+}
+function cancel(item) {
+  (timers.get(item) || []).forEach(clearTimeout);
+  timers.delete(item);
+}
+
+// Request values end up in file names: keep them to one plain name segment.
+const safe = (s) => path.basename(String(s)).replace(/^\.+/, '') || 'x';
 
 // Field set and defaults of a real MeTube history entry.
 function entry(body, video, status) {
@@ -66,9 +84,9 @@ function entry(body, video, status) {
 function fileFor(item) {
   const stem = `${item.title} [${item.id}]`;
   switch (item.download_type) {
-    case 'audio': return { name: `${stem}.${item.format === 'any' ? 'm4a' : item.format}`, data: Buffer.from('mock audio\n') };
+    case 'audio': return { name: `${stem}.${item.format === 'any' ? 'm4a' : safe(item.format)}`, data: Buffer.from('mock audio\n') };
     case 'captions': {
-      const lang = CATALOG[item.id]?.lang === 'de' ? 'de' : item.subtitle_language;
+      const lang = CATALOG[item.id]?.lang === 'de' ? 'de' : safe(item.subtitle_language);
       return { name: `${stem}.${lang}.txt`, data: Buffer.from(TRANSCRIPT[lang] || TRANSCRIPT.en) };
     }
     case 'thumbnail': return { name: `${stem}.jpg`, data: fs.readFileSync(new URL('thumbnail.jpg', FIXTURES)) };
@@ -78,6 +96,7 @@ function fileFor(item) {
 
 // One entry per URL: a new result replaces the old one, like MeTube.
 function finish(item) {
+  cancel(item);
   queue = queue.filter((q) => q !== item);
   done = done.filter((d) => d.url !== item.url).concat(item);
 }
@@ -91,13 +110,18 @@ function run(item) {
     for (let p = 0; p <= 100; p += 20) steps.push(() => { item.status = 'downloading'; item.percent = p; });
   }
   const video = CATALOG[item.id];
-  if (video?.failFirst && (attempts[item.url] = (attempts[item.url] || 0) + 1) === 1) {
-    steps.push(() => {
-      item.status = 'error';
-      item.percent = null;
-      item.msg = 'ERROR: unable to download video data: HTTP Error 403: Forbidden';
-      finish(item);
-    });
+  const fail = (msg) => steps.push(() => {
+    item.status = 'error';
+    item.percent = null;
+    item.msg = msg;
+    finish(item);
+  });
+  if (!video) {
+    // Unknown video: MeTube accepts the job and fails it a moment later.
+    steps.length = 1;
+    fail(`[youtube] ${item.id} This video is unavailable\nNo video formats found!`);
+  } else if (video.failFirst && (attempts[item.url] = (attempts[item.url] || 0) + 1) === 1) {
+    fail('ERROR: unable to download video data: HTTP Error 403: Forbidden');
   } else {
     steps.push(() => { item.status = 'postprocessing'; });
     steps.push(() => {
@@ -109,7 +133,7 @@ function run(item) {
     });
     steps.push(() => finish(item));
   }
-  steps.forEach((step, i) => timers.push(setTimeout(step, (i + 1) * TICK_MS)));
+  steps.forEach((step, i) => schedule(item, step, (i + 1) * TICK_MS));
 }
 
 function add(body) {
@@ -117,41 +141,25 @@ function add(body) {
   if (queue.some((q) => q.url === body.url)) {
     return { status: 'ok', msg: `Already in queue: ${queue.find((q) => q.url === body.url).title}` };
   }
-  if (!id || !CATALOG[id]) {
-    // MeTube accepts the job and fails it a moment later.
-    const item = entry(body, { id: id || 'unknown', title: id ? `youtube video #${id}` : body.url }, 'preparing');
-    queue.push(item);
-    timers.push(setTimeout(() => {
-      item.status = 'error';
-      item.msg = `[youtube] ${id} This video is unavailable\nNo video formats found!`;
-      finish(item);
-    }, 2 * TICK_MS));
-    return { status: 'ok' };
-  }
-  const item = entry(body, { id, title: CATALOG[id].title }, 'pending');
+  const title = CATALOG[id]?.title || (id ? `youtube video #${id}` : String(body.url));
+  const item = entry(body, { id: id || 'unknown', title }, 'pending');
   queue.push(item);
   run(item);
   return { status: 'ok' };
 }
 
 function seed() {
-  timers.forEach(clearTimeout);
-  timers = [];
+  [...timers.keys()].forEach(cancel);
   queue = [];
   done = [];
   events = [];
   attempts = {};
   hasCookies = false;
-  // Never wipe a folder this mock did not create (e.g. a real downloads mount).
-  const marker = path.join(DIR, '.factory-sandbox');
-  if (!fs.existsSync(marker) && fs.readdirSync(DIR).length) {
-    throw new Error(`${DIR} is not empty and has no .factory-sandbox marker; refusing to reset it`);
-  }
   for (const name of fs.readdirSync(DIR)) {
     if (name === '.factory-sandbox') continue;
     fs.rmSync(path.join(DIR, name), { recursive: true, force: true });
   }
-  fs.writeFileSync(marker, 'Owned by the factory mock MeTube; reset wipes this folder.\n');
+  fs.writeFileSync(MARKER, 'Owned by the factory mock MeTube; reset wipes this folder.\n');
   const seeded = [
     ['aqz-KE-bpKQ', 'video'], ['aqz-KE-bpKQ', 'thumbnail'], ['jNQXAC9IVRw', 'captions'],
   ];
@@ -191,13 +199,22 @@ function readBody(req) {
   });
 }
 
-const server = http.createServer(async (req, res) => {
+const server = http.createServer((req, res) => {
+  handle(req, res).catch((err) => {
+    console.error(err);
+    if (!res.headersSent) res.writeHead(400, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ status: 'error', msg: `mock: ${err.message}` }));
+  });
+});
+
+async function handle(req, res) {
   const url = new URL(req.url, 'http://mock');
   const json = (code, data) => { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(data)); };
   const raw = await readBody(req);
   let body = {};
   if (req.headers['content-type']?.includes('json')) {
     try { body = JSON.parse(raw.toString() || '{}'); } catch { return json(400, { status: 'error', msg: 'invalid JSON' }); }
+    if (!body || typeof body !== 'object') return json(400, { status: 'error', msg: 'JSON object expected' });
   }
   if (req.method === 'POST' && !url.pathname.startsWith('/_mock')) {
     events.push({ seq: events.length + 1, path: url.pathname, body: req.headers['content-type']?.includes('json') ? body : `(${raw.length} bytes)`, at: new Date().toISOString() });
@@ -218,7 +235,10 @@ const server = http.createServer(async (req, res) => {
     if (body.delete_files) {
       list.filter((i) => ids.has(i.url) && i.filename).forEach((i) => fs.rmSync(path.join(DIR, i.filename), { force: true }));
     }
-    if (body.where === 'queue') queue = queue.filter((i) => !ids.has(i.url));
+    if (body.where === 'queue') {
+      queue.filter((i) => ids.has(i.url)).forEach(cancel);
+      queue = queue.filter((i) => !ids.has(i.url));
+    }
     else done = done.filter((i) => !ids.has(i.url));
     return json(200, { status: 'ok' });
   }
@@ -249,7 +269,7 @@ const server = http.createServer(async (req, res) => {
     return fs.createReadStream(file).pipe(res);
   }
   return json(404, { status: 'error', msg: `mock: no route for ${route}` });
-});
+}
 
 seed();
 server.listen(PORT, () => console.log(`mock MeTube on :${PORT}, downloads in ${DIR}, tick ${TICK_MS} ms`));
