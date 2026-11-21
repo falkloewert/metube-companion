@@ -1,13 +1,18 @@
 #!/usr/bin/env bash
-# Rebuilds docs/demo.mp4 from scratch, fully automatic:
-#   builds the image, starts compose.desktop.yml with it (real MeTube, real
-#   YouTube downloads), drives the web UI with Playwright (record.js), encodes
-#   the screencast with ffmpeg, tears everything down.
+# Rebuilds docs/demo.mp4 from scratch, fully automatic, nobody records anything by hand:
+#   builds the image and the extension, starts compose.desktop.yml with it (real
+#   MeTube, real YouTube downloads), then
+#     part 1  a real Chromium with the extension on a YouTube page, recorded as the
+#             X display (xvfb + ffmpeg x11grab, real mouse input via xinput.py),
+#     part 2  the real web UI (desktop, then phone) driven by Playwright (record.js),
+#   adds music and synthesized UI sounds and encodes everything (compose.py).
+#   The story is in storyboard.md; the music is credited in CREDITS.md.
 #
-# Needs: docker, node, ffmpeg, Playwright for Node (`npm i -g playwright`,
+# Needs: docker, node, ffmpeg (with x11grab), xvfb-run, ImageMagick (`import`),
+# python3 with numpy, Playwright for Node (`npm i -g playwright`,
 # `playwright install chromium`) and internet access.
 #
-#   docs/demo/record.sh              # writes docs/demo.mp4
+#   docs/demo/record.sh                  # writes docs/demo.mp4
 #   DEMO_TMP=/path docs/demo/record.sh   # where the temp files go (default /tmp)
 #   SKIP_BUILD=1 / KEEP=1 / SHOTS=dir    # reuse the image / keep temp files / save debug PNGs
 set -euo pipefail
@@ -24,10 +29,24 @@ cleanup() {
 }
 trap cleanup EXIT
 
-for c in docker node ffmpeg; do command -v "$c" >/dev/null || { echo "missing: $c" >&2; exit 1; }; done
+for c in docker node ffmpeg xvfb-run import python3; do command -v "$c" >/dev/null || { echo "missing: $c" >&2; exit 1; }; done
+python3 -c 'import numpy' 2>/dev/null || { echo "missing: python3 numpy" >&2; exit 1; }
 export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null || true)}"
 
 [ -n "${SKIP_BUILD:-}" ] || docker build -q -t metube-companion:demo "$ROOT" >/dev/null
+
+# The extension as users get it (Chromium package), unpacked. Only the host
+# permission for the demo port is added: the extension asks for it in a prompt
+# otherwise, which nobody can click here.
+"$ROOT/extension/build.sh" >/dev/null
+python3 -m zipfile -e "$ROOT/extension/dist/metube-companion-chromium.zip" "$WORK/ext"
+python3 - "$WORK/ext/manifest.json" "$PORT" <<'PY'
+import json, sys
+path, port = sys.argv[1], sys.argv[2]
+m = json.load(open(path))
+m['host_permissions'].append(f'http://localhost:{port}/*')
+json.dump(m, open(path, 'w'), indent=1)
+PY
 
 # The desktop compose file with the locally built image and a throw-away
 # download folder.
@@ -51,13 +70,11 @@ stack_up() {
 ok=
 for attempt in 1 2 3; do
   stack_up
-  if BASE="http://127.0.0.1:$PORT" OUT="$WORK/out" SHOTS="${SHOTS:-}" node "$HERE/record.js"; then ok=1; break; fi
+  if BASE="http://localhost:$PORT" EXT="$WORK/ext" OUT="$WORK/out" SHOTS="${SHOTS:-}" \
+      xvfb-run -a -s "-screen 0 1920x1080x24" node "$HERE/record.js"; then ok=1; break; fi
   echo "attempt $attempt failed" >&2
 done
 [ -n "$ok" ] || exit 1
 
-# 30 fps, H.264, no audio (captions instead of voice).
-ffmpeg -hide_banner -loglevel error -y -f concat -safe 0 -i "$WORK/out/frames.txt" \
-  -vf "fps=30,format=yuv420p" -c:v libx264 -preset slow -crf 22 -movflags +faststart \
-  "$ROOT/docs/demo.mp4"
+python3 -I "$HERE/compose.py" "$WORK/out" "$ROOT/docs/demo.mp4"
 ls -l "$ROOT/docs/demo.mp4"

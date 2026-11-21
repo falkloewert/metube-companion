@@ -9,7 +9,7 @@ Installing for a user? Read [INSTALL.md](INSTALL.md) instead. This file is for c
 - `nginx/default.conf.template`: rendered at container start (envsubst): `/api/` (UI), `/ext/` (extension, CORS + MeTube's Sec-Fetch-Site guard), `/yt/<id>` (watch page for language detection), `/files/` (listing, DELETE of files), `/config.js`, `/healthz`.
 - `docker/`, `Dockerfile`: image runs nginx as any user; `40-cleanup.sh` does `RETENTION_DAYS`.
 - `compose.desktop.yml`, `compose.server.yml`: the two supported install paths.
-- `docs/demo/`: `record.sh` rebuilds `docs/demo.mp4` end to end (own stack, real downloads, Playwright, ffmpeg). Re-run it after UI changes that show in the video.
+- `docs/demo/`: `record.sh` rebuilds `docs/demo.mp4` end to end, see `storyboard.md` (own stack, real downloads; the extension part is the real X display of a headed Chromium under xvfb, the web part is Playwright; synthesized sounds, CC0 music from `CREDITS.md`). Re-run it after UI or extension changes that show in the video.
 
 ## MeTube behavior the code depends on
 
