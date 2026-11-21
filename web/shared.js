@@ -6,7 +6,7 @@
 // web/app.js and extension/popup.js. Copied into the extension by build.sh.
 
 // Bump together with the extension manifests on every release.
-const COMPANION_VERSION = '0.1.0';
+const COMPANION_VERSION = '0.2.0';
 const ISSUES_URL = 'https://github.com/falkloewert/metube-companion/issues/new';
 
 // Prefilled bug report. Opens GitHub in the browser; nothing is sent until

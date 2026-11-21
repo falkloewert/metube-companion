@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## 0.2.0 - 2026-11-21
+
+Note: deleting now moves files to the trash for 7 days; set `TRASH_DAYS: "0"` for the old behavior.
 
 - Optional download settings: video quality (Best, 1080p, 720p, 480p) and audio format (M4A, MP3, Opus), in a collapsible section of the web UI and on the extension's settings page; the tiles stay two taps (#14).
 - Trash: deleting a video (and "Clear all" with files) moves its files to the hidden folder `.trash` instead of deleting them; the Trash section of the web UI lists them with "Restore" and "Empty trash". New `TRASH_DAYS` (default 7, `0` = delete right away) purges the trash automatically (#12).
