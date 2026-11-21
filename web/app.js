@@ -4,6 +4,8 @@
 // select, tap again to send. Entries stay in the DOM as nodes and are only
 // updated, so animations and state do not restart on each 2 s poll.
 
+translatePage();
+
 const API = '/api';
 const POLL_MS = 2000;
 
@@ -33,7 +35,7 @@ function setStatus(text, bad) {
 
 function setConn(ok) {
   el.conn.classList.toggle('bad', !ok);
-  el.conn.textContent = ok ? 'Connected' : 'Offline';
+  el.conn.textContent = ok ? t('Connected') : t('Offline');
 }
 
 // Protected instance (COMPANION_TOKEN): the token lives in a cookie, so
@@ -59,7 +61,7 @@ async function api(path, options) {
   const text = await res.text();
   let data = null;
   try { data = text ? JSON.parse(text) : null; } catch (_) { /* not JSON */ }
-  if (res.status === 401) { askToken(); throw new Error('Access token needed.'); }
+  if (res.status === 401) { askToken(); throw new Error(t('Access token needed.')); }
   if (!res.ok) {
     const msg = (data && (data.msg || data.error)) || res.statusText || ('HTTP ' + res.status);
     throw new Error(msg);
@@ -103,7 +105,7 @@ function syncUrlBtn() {
   const empty = !el.url.value;
   urlBtn.hidden = empty && !(navigator.clipboard && navigator.clipboard.readText);
   urlBtn.innerHTML = empty ? PASTE : CLEAR;
-  urlBtn.title = empty ? 'Paste' : 'Clear';
+  urlBtn.title = empty ? t('Paste') : t('Clear');
   urlBtn.setAttribute('aria-label', urlBtn.title);
 }
 
@@ -114,7 +116,7 @@ const tileCtl = initTiles({
   setStatus,
   onSend: async (url, kind) => {
     const lang = await add(url, kind);
-    return { status: lang ? 'Sent, text in ' + (lang === 'en' ? 'English' : 'German') + '.' : 'Sent.' };
+    return { status: lang ? t('Sent, text in {lang}.', { lang: lang === 'en' ? t('English') : t('German') }) : t('Sent.') };
   },
   onSent: () => { syncUrlBtn(); refresh(); },
 });
@@ -125,10 +127,10 @@ urlBtn.addEventListener('click', async () => {
   try {
     el.url.value = (await navigator.clipboard.readText()).trim();
     syncUrlBtn();
-    setStatus(el.url.value ? '' : 'Clipboard is empty.', !el.url.value);
+    setStatus(el.url.value ? '' : t('Clipboard is empty.'), !el.url.value);
   } catch (_) {
     el.url.focus();
-    setStatus('Paste not allowed, please long-press and paste.', true);
+    setStatus(t('Paste not allowed, please long-press and paste.'), true);
   }
 });
 
@@ -296,10 +298,10 @@ function ageText(files) {
   const newest = Math.max(...times);
   const startOf = (t) => new Date(t).setHours(0, 0, 0, 0);
   const ago = Math.round((startOf(Date.now()) - startOf(newest)) / day);
-  const when = ago <= 0 ? 'today' : ago === 1 ? 'yesterday' : ago + ' days ago';
+  const when = ago <= 0 ? t('today') : ago === 1 ? t('yesterday') : t('{n} days ago', { n: ago });
   if (!KEEP_DAYS) return when;
   const left = Math.max(0, Math.ceil((Math.min(...times) + KEEP_DAYS * day - Date.now()) / day));
-  return when + ' · ' + (left <= 1 ? 'deleted soon' : left + ' days left');
+  return when + ' · ' + (left <= 1 ? t('deleted soon') : t('{n} days left', { n: left }));
 }
 
 async function transcriptOf(rel) {
@@ -370,21 +372,21 @@ function makeNode() {
   li.innerHTML = '<div class="head"><div class="kind" aria-hidden="true"></div>' +
     '<div class="text"><a class="title" target="_blank" rel="noopener"></a><div class="meta"></div></div></div>' +
     '<div class="bar"><div class="fill"></div></div>' +
-    '<div class="formats" role="group" aria-label="Formats"></div>' +
+    '<div class="formats" role="group" aria-label="' + t('Formats') + '"></div>' +
     '<div class="textpanel" hidden><div class="tp-head"></div><p class="preview"></p><div class="tp-actions">' +
-    '<button type="button" class="pill copy">' + ICON.copy + CHECK('tick') + 'Copy all</button>' +
-    '<button type="button" class="pill md">' + ICON.md + CHECK('tick') + 'As .md</button></div></div>';
+    '<button type="button" class="pill copy">' + ICON.copy + CHECK('tick') + t('Copy all') + '</button>' +
+    '<button type="button" class="pill md">' + ICON.md + CHECK('tick') + t('As .md') + '</button></div></div>';
   const formats = li.querySelector('.formats');
   const cells = makeFormatCells(formats);
 
   const actions = document.createElement('div');
   actions.className = 'actions';
   const b = {
-    report: button('', 'Report this problem on GitHub', ICON.report, 'a'),
-    open: button('open', 'Open original', ICON.open, 'a'),
-    del: button('del', 'Delete', ICON.del),
+    report: button('', t('Report this problem on GitHub'), ICON.report, 'a'),
+    open: button('open', t('Open original'), ICON.open, 'a'),
+    del: button('del', t('Delete'), ICON.del),
   };
-  b.del.insertAdjacentHTML('beforeend', '<span class="ask">Delete?</span>');
+  b.del.insertAdjacentHTML('beforeend', '<span class="ask">' + t('Delete?') + '</span>');
   b.open.target = b.report.target = '_blank';
   b.open.rel = b.report.rel = 'noopener';
   Object.values(b).forEach((x) => actions.appendChild(x));
@@ -403,7 +405,7 @@ function makeNode() {
         onSave: (rel) => saveFile(downloadUrl(rel), splitPath(rel)[1]),
         onCancel: async (url) => {
           const res = await post('/delete', { ids: [url], where: 'queue' });
-          if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+          if (res && res.status === 'error') throw new Error(res.msg || t('MeTube refused.'));
         },
         onRetry: (url) => retryJob(url, post),
         onRequest: add,
@@ -424,11 +426,11 @@ function makeNode() {
         await navigator.clipboard.writeText(await text);
       }
       flash(copy);
-      toast('Text copied.');
+      toast(t('Text copied.'));
     } catch (_) {
       // Browsers only allow the clipboard over HTTPS or localhost.
-      if (copyFallback(await textOf(n).catch(() => ''))) { flash(copy); toast('Text copied.'); return; }
-      toast(window.isSecureContext ? 'Copy did not work, use .md instead.' : 'Copying needs HTTPS here, use .md instead.', true);
+      if (copyFallback(await textOf(n).catch(() => ''))) { flash(copy); toast(t('Text copied.')); return; }
+      toast(window.isSecureContext ? t('Copy did not work, use .md instead.') : t('Copying needs HTTPS here, use .md instead.'), true);
     }
   });
   const md = panel.querySelector('.md');
@@ -436,7 +438,7 @@ function makeNode() {
     try {
       saveMd(n.item, await textOf(n));
       flash(md);
-    } catch (e) { toast('Download failed: ' + e.message, true); }
+    } catch (e) { toast(t('Download failed: {msg}', { msg: e.message }), true); }
   });
 
   // Delete is the only action that asks first: the first tap shows "Delete?",
@@ -444,7 +446,7 @@ function makeNode() {
   b.del.addEventListener('click', async () => {
     if (!b.del.classList.contains('armed')) {
       document.querySelectorAll('.act.del.armed').forEach((x) => x.classList.remove('armed'));
-      b.del.querySelector('.ask').textContent = n.where === 'queue' ? 'Cancel?' : 'Delete files?';
+      b.del.querySelector('.ask').textContent = n.where === 'queue' ? t('Cancel?') : t('Delete files?');
       b.del.classList.add('armed');
       n.delTimer = setTimeout(() => b.del.classList.remove('armed'), 4000);
       return;
@@ -453,14 +455,14 @@ function makeNode() {
     b.del.disabled = true;
     try {
       if (n.item.orphan) {
-        if ((await removeFiles(n.item.orphan)).includes(false)) throw new Error('not all formats could be deleted.');
+        if ((await removeFiles(n.item.orphan)).includes(false)) throw new Error(t('not all formats could be deleted.'));
         listingsAt = 0;
-        toast(TRASH_DAYS ? 'Moved to the trash.' : 'Deleted.');
+        toast(TRASH_DAYS ? t('Moved to the trash.') : t('Deleted.'));
         return;
       }
       // With a trash MeTube only drops the history entry; the files move below.
       const res = await post('/delete', { ids: [n.item.url], where: n.where, delete_files: n.where === 'queue' || !TRASH_DAYS });
-      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+      if (res && res.status === 'error') throw new Error(res.msg || t('MeTube refused.'));
       if (n.where === 'done') {
         // Fresh list, so a format that just finished is included.
         listingsAt = 0;
@@ -469,11 +471,11 @@ function makeNode() {
         delete stems[n.item.url];
         saveStems();
         listingsAt = 0;
-        if (gone.includes(false)) throw new Error('not all formats could be deleted.');
+        if (gone.includes(false)) throw new Error(t('not all formats could be deleted.'));
       }
-      toast(n.where === 'queue' ? 'Cancelled.' : TRASH_DAYS ? 'Moved to the trash.' : 'Deleted.');
+      toast(n.where === 'queue' ? t('Cancelled.') : TRASH_DAYS ? t('Moved to the trash.') : t('Deleted.'));
     } catch (e) {
-      toast('That did not work: ' + e.message, true);
+      toast(t('That did not work: {msg}', { msg: e.message }), true);
     } finally {
       b.del.disabled = false;
       b.del.classList.remove('armed');
@@ -522,9 +524,9 @@ function update(n, item, where) {
   const web = isWebUrl(item.url);
   if (web) title.href = item.url; else title.removeAttribute('href');
   const run = running ? progress(item, progs) : null;
-  const fallbackMeta = failed ? failReason(item) : item.status === 'finished' ? 'done' : (item.msg || item.status || '');
+  const fallbackMeta = failed ? failReason(item) : item.status === 'finished' ? t('done') : (item.msg || item.status || '');
   li.querySelector('.meta').textContent = run ? run.verb : (finished && ageText(n.files)) || fallbackMeta;
-  li.querySelector('.meta').title = finished && KEEP_DAYS ? 'Files are deleted automatically ' + KEEP_DAYS + ' days after download.' : '';
+  li.querySelector('.meta').title = finished && KEEP_DAYS ? t('Files are deleted automatically {n} days after download.', { n: KEEP_DAYS }) : '';
 
   li.classList.toggle('running', running);
   li.classList.toggle('finished', finished);
@@ -547,7 +549,7 @@ function update(n, item, where) {
 
   if (web) b.open.href = item.url;
   if (failed) b.report.href = reportUrl(item, 'web');
-  b.del.title = running ? 'Cancel' : 'Delete, with all formats';
+  b.del.title = running ? t('Cancel') : t('Delete, with all formats');
   if (!n.files.captions && !n.panel.hidden) toggleTextPanel(n.panel, cells.captions, false);
   // Without a link there is nothing to request from.
   Object.values(cells).forEach((c) => { c.hidden = !web && !!item.orphan && c.dataset.state === 'missing'; });
@@ -692,10 +694,12 @@ let lastOrphans = [];
 clear.btn.addEventListener('click', () => {
   const n = lastDone.length;
   const o = lastOrphans.length;
-  const entries = (k) => k + (k === 1 ? ' entry' : ' entries');
+  const entries = (k) => k === 1 ? t('{n} entry', { n: k }) : t('{n} entries', { n: k });
+  const filtered = !!(filter.q || filter.on.size);
   clear.q.textContent = n
-    ? 'Clear ' + entries(n) + ' from the history' + (filter.q || filter.on.size ? ' (filters ignored)' : '') + '?' + (o ? ' "Delete files too" also deletes ' + entries(o) + ' without history.' : '')
-    : 'Delete the files of ' + entries(o) + ' without history?';
+    ? (filtered ? t('Clear {entries} from the history (filters ignored)?', { entries: entries(n) }) : t('Clear {entries} from the history?', { entries: entries(n) })) +
+      (o ? ' ' + t('"Delete files too" also deletes {entries} without history.', { entries: entries(o) }) : '')
+    : t('Delete the files of {entries} without history?', { entries: entries(o) });
   $('clear-history').hidden = !n;
   clear.bar.hidden = false;
   $('clear-cancel').focus();
@@ -713,16 +717,18 @@ async function clearAll(withFiles) {
     const files = withFiles ? items.flatMap((i) => siblingsOf(i)).concat(extra) : [];
     if (items.length) {
       const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles && !TRASH_DAYS });
-      if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+      if (res && res.status === 'error') throw new Error(res.msg || t('MeTube refused.'));
     }
     const gone = withFiles ? await removeFiles(files) : [];
     items.forEach((i) => { delete stems[i.url]; });
     saveStems();
-    if (gone.includes(false)) throw new Error('some files could not be ' + (TRASH_DAYS ? 'moved.' : 'deleted.'));
-    toast(withFiles ? (TRASH_DAYS ? (items.length ? 'History cleared, files' : 'Files') + ' moved to the trash.' : 'History and files deleted.') : 'History cleared. The files stay and are still listed.');
+    if (gone.includes(false)) throw new Error(TRASH_DAYS ? t('some files could not be moved.') : t('some files could not be deleted.'));
+    toast(withFiles
+      ? (TRASH_DAYS ? (items.length ? t('History cleared, files moved to the trash.') : t('Files moved to the trash.')) : t('History and files deleted.'))
+      : t('History cleared. The files stay and are still listed.'));
     clear.bar.hidden = true;
   } catch (e) {
-    toast('That did not work: ' + e.message, true);
+    toast(t('That did not work: {msg}', { msg: e.message }), true);
   } finally {
     buttons.forEach((x) => { x.disabled = false; });
     listingsAt = 0;
@@ -784,7 +790,7 @@ async function loadTrash() {
 function trashLeft(stamp) {
   const day = 86400000;
   const left = Math.ceil((stamp * 1000 + TRASH_DAYS * day - serverNow()) / day);
-  return left <= 1 ? 'removed for good soon' : 'removed for good in ' + left + ' days';
+  return left <= 1 ? t('removed for good soon') : t('removed for good in {n} days', { n: left });
 }
 
 function renderTrash() {
@@ -795,9 +801,9 @@ function renderTrash() {
     const li = document.createElement('li');
     li.className = 'item trashed';
     li.innerHTML = '<div class="text"><span class="title"></span><div class="meta"></div></div>' +
-      '<button type="button" class="btn">Restore</button>';
+      '<button type="button" class="btn">' + t('Restore') + '</button>';
     li.querySelector('.title').textContent = g.title;
-    const kinds = Object.keys(byKind(g.files)).map((k) => LABEL[k]).join(', ');
+    const kinds = Object.keys(byKind(g.files)).map((k) => t(LABEL[k])).join(', ');
     li.querySelector('.meta').textContent = kinds + ' · ' + trashLeft(g.stamp);
     li.querySelector('button').addEventListener('click', (e) => restore(g, e.currentTarget));
     return li;
@@ -808,11 +814,11 @@ async function restore(g, button) {
   button.disabled = true;
   try {
     const res = await Promise.all(g.files.map((rel) => moveFile('.trash/' + g.stamp + '/' + rel, rel, true)));
-    if (res.includes('exists')) throw new Error('a file with the same name is already in the download folder.');
-    if (res.includes('fail')) throw new Error('not all files could be restored.');
-    toast('Restored.');
+    if (res.includes('exists')) throw new Error(t('a file with the same name is already in the download folder.'));
+    if (res.includes('fail')) throw new Error(t('not all files could be restored.'));
+    toast(t('Restored.'));
   } catch (e) {
-    toast('Restore did not work: ' + e.message, true);
+    toast(t('Restore did not work: {msg}', { msg: e.message }), true);
   } finally {
     listingsAt = 0;
     await loadTrash();
@@ -826,7 +832,7 @@ let purgeTimer = null;
 trashEl.btn.addEventListener('click', async () => {
   if (!trashEl.btn.classList.contains('armed')) {
     trashEl.btn.classList.add('armed');
-    trashEl.btn.textContent = 'Delete for good?';
+    trashEl.btn.textContent = t('Delete for good?');
     purgeTimer = setTimeout(disarmPurge, 4000);
     return;
   }
@@ -834,10 +840,10 @@ trashEl.btn.addEventListener('click', async () => {
   trashEl.btn.disabled = true;
   try {
     const files = trashGroups.flatMap((g) => g.files.map((rel) => '.trash/' + g.stamp + '/' + rel));
-    if ((await deleteFiles(files)).includes(false)) throw new Error('not all files could be deleted.');
-    toast('Trash emptied.');
+    if ((await deleteFiles(files)).includes(false)) throw new Error(t('not all files could be deleted.'));
+    toast(t('Trash emptied.'));
   } catch (e) {
-    toast('That did not work: ' + e.message, true);
+    toast(t('That did not work: {msg}', { msg: e.message }), true);
   } finally {
     trashEl.btn.disabled = false;
     disarmPurge();
@@ -846,11 +852,11 @@ trashEl.btn.addEventListener('click', async () => {
 });
 function disarmPurge() {
   trashEl.btn.classList.remove('armed');
-  trashEl.btn.textContent = 'Empty trash';
+  trashEl.btn.textContent = t('Empty trash');
 }
 
 if (TRASH_DAYS) {
-  $('trash-days').textContent = TRASH_DAYS + (TRASH_DAYS === 1 ? ' day' : ' days');
+  $('trash-days').textContent = TRASH_DAYS === 1 ? t('{n} day', { n: 1 }) : t('{n} days', { n: TRASH_DAYS });
   trashEl.box.hidden = false;
   trashEl.box.addEventListener('toggle', () => { if (trashEl.box.open) loadTrash(); });
 }
@@ -862,7 +868,7 @@ const prefs = (() => {
 })();
 Object.keys(PREF_OPTIONS).forEach((k) => {
   const sel = $('pref-' + k);
-  PREF_OPTIONS[k].forEach(([v, t]) => sel.add(new Option(t, v)));
+  PREF_OPTIONS[k].forEach(([v, label]) => sel.add(new Option(t(label), v)));
   sel.value = prefs[k];
   sel.addEventListener('change', () => {
     prefs[k] = sel.value;
@@ -876,7 +882,7 @@ async function cookieStatus() {
   try {
     const s = await api('/cookie-status');
     const has = !!(s && s.has_cookies);
-    el.cookieStatus.textContent = has ? 'Cookies are stored.' : 'No cookies stored.';
+    el.cookieStatus.textContent = has ? t('Cookies are stored.') : t('No cookies stored.');
     el.cookieDelete.hidden = !has;
   } catch (_) {
     el.cookieStatus.textContent = '';
@@ -890,18 +896,18 @@ el.cookieFile.addEventListener('change', async () => {
   data.append('cookies', file, 'cookies.txt');
   try {
     await api('/upload-cookies', { method: 'POST', body: data });
-    toast('Cookies saved.');
+    toast(t('Cookies saved.'));
     el.cookieFile.value = '';
     cookieStatus();
   } catch (e) {
-    toast('Upload failed: ' + e.message, true);
+    toast(t('Upload failed: {msg}', { msg: e.message }), true);
   }
 });
 
 el.cookieDelete.addEventListener('click', async () => {
   try {
     await api('/delete-cookies', { method: 'POST' });
-    toast('Cookies removed.');
+    toast(t('Cookies removed.'));
     cookieStatus();
   } catch (e) {
     toast(e.message, true);
@@ -918,9 +924,9 @@ function takeShared() {
   if (!['url', 'text', 'title'].some((k) => q.has(k))) return;
   const found = ['url', 'text', 'title'].map((k) => (q.get(k) || '').match(/https?:\/\/\S+/)).find(Boolean);
   history.replaceState(null, '', location.pathname);
-  if (!found) { setStatus('The shared content had no link.', true); return; }
+  if (!found) { setStatus(t('The shared content had no link.'), true); return; }
   el.url.value = found[0];
-  setStatus('Link taken over. Tap Video, Audio or Text.');
+  setStatus(t('Link taken over. Tap Video, Audio or Text.'));
 }
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});

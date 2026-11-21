@@ -5,6 +5,7 @@ Installing for a user? Read [INSTALL.md](INSTALL.md) instead. This file is for c
 ## Layout
 
 - `web/`: the web UI (plain HTML/CSS/JS, no build step). `shared.js` and `shared.css` are shared with the extension: formats, payloads, language detection, progress, icons, colors, format cells, text panel. Change shared behavior there, not twice.
+- `web/i18n/`: one strings file per UI language (`de.js`), loaded before `shared.js`, active only when the browser's first language matches.
 - `extension/`: Chromium (MV3, `manifest.chromium.json`) and Firefox (MV2, `manifest.json`) from one source. `build.sh` copies `../web/shared.*` into the packages.
 - `nginx/default.conf.template`: rendered at container start (envsubst): `/api/` (UI), `/ext/` (extension, CORS + MeTube's Sec-Fetch-Site guard), `/yt/<id>` (watch page for language detection), `/files/` (listing, DELETE of files), `/config.js`, `/healthz`.
 - `docker/`, `Dockerfile`: image runs nginx as any user; `40-cleanup.sh` does `RETENTION_DAYS`.
@@ -23,7 +24,7 @@ Not a stable API; re-check after MeTube updates.
 
 ## Rules
 
-- English everywhere (UI, comments, docs).
+- Code, comments and docs in English. UI text is English by default; translations live in `web/i18n/<lang>.js` (English text -> translation, picked from the browser language, web UI only). New UI strings go through `t()` (or `data-i18n` in `index.html`) and need a German entry; `tests/i18n.test.mjs` fails otherwise. The extension stays English (no dictionary loaded).
 - No login exists. Never add anything that makes exposing the instance look safe; keep the warnings.
 - Every UI action must stay understandable for a first-time user: a verb in each format cell, only destructive actions ask for confirmation.
 - Keep `COMPANION_VERSION` in `web/shared.js` and both extension manifests in sync on release.
@@ -45,10 +46,24 @@ docker compose -f docker-compose.factory.yml down -v
 - Not mocked: card thumbnails load from `i.ytimg.com` in the browser; browser tests should route them to `factory/mocks/metube/fixtures/thumbnail.jpg`.
 - `tests/smoke.sh` stays the end-to-end check against a real MeTube and YouTube.
 
+### Evidence (Level 1): proof video and quality gate
+
+```sh
+factory/run-evidence.sh        # exit 0 = PASS; --keep leaves the sandbox running, --out <dir> changes the target
+```
+
+One command: own Compose project and ephemeral ports, unit checks (`node --check`, plus `node --test` for `tests/*.test.mjs` once they exist), `factory/smoke.sh`, then Playwright in the `evidence` container (same Docker network, reaches `http://web:8080` and `http://metube:8081` by service name; keep the service name `web`, Chromium forces HTTPS on `.app`/`.dev`), then `EVIDENCE.md` and the quality gate. Always tears down (`down -v`).
+
+- Artifacts land in `factory/artifacts/` (git-ignored, wiped at each run): `EVIDENCE.md`, `quality-gate.json`, `videos/proof.mp4`, `preview/proof-preview.gif`, `screenshots/`, `proof-steps.json`, `smoke.log`.
+- Kit in `factory/evidence/`: `tests/companion-regression.spec.mjs` (fast regression, video only on failure) and `tests/proof-flow.spec.mjs` (the one proof video). Replace the steps of `proof-flow.spec.mjs` per ticket; keep one proof spec.
+- `scripts/sandbox.mjs` is the `test` every spec imports: it resets the mock before each test, serves `i.ytimg.com` thumbnails from `factory/mocks/metube/fixtures/thumbnail.jpg` and fails the test if any other request leaves the sandbox.
+- CI: `.github/workflows/level1-evidence.yml` runs this on every pull request, uploads the artifacts and posts the evidence comment. Its scope patterns are a copy of `factory/evidence/scripts/scope-classifier.mjs`; change both together.
+
 ## Check before committing
 
 ```sh
-for f in web/*.js extension/*.js; do node --check "$f"; done
+for f in web/*.js web/i18n/*.js extension/*.js; do node --check "$f"; done
+node --test   # unit tests in tests/ (i18n coverage)
 ./extension/build.sh
 docker build -t metube-companion:test .
 tests/smoke.sh   # MeTube + companion end to end, incl. token and file rules
