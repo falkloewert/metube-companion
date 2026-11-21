@@ -16,7 +16,8 @@ const jobMeta = $('jobmeta');
 const formats = $('formats');
 const panel = $('textpanel');
 
-// ponytail: fixed placeholder, issue #4 makes the instance URL configurable at runtime
+// Desktop setup default; other instances are set on the options page, which
+// also asks for the host permission (optional_host_permissions).
 const DEFAULT_BASE = 'http://localhost:8081';
 const LABEL = Object.fromEntries(FORMATS.map((f) => [f.kind, f.label]));
 
@@ -200,6 +201,7 @@ async function refreshJob() {
     render(done, running, byKind(siblings(done || { url: lastUrl }, listings, stemBase)));
   } catch (_) {
     job.hidden = true;
+    if (!status.textContent) setStatus('Cannot reach ' + (await getBase()) + '. Check the address in Settings and your network or VPN.', true);
   } finally {
     refreshing = false;
   }
@@ -226,6 +228,9 @@ function render(done, running, found) {
   jobTitle.textContent = item.title || lastUrl;
   jobTitle.dataset.url = item.url || '';
   job.classList.toggle('error', failed);
+  const report = $('report');
+  report.hidden = !failed;
+  if (failed) report.href = reportUrl(done, 'extension');
   jobMeta.textContent = run ? LABEL[first.download_type || 'video'] + ': ' + run.verb
     : failed ? friendlyError(done.msg || done.error || (kind === 'captions' ? 'no text found' : 'no file'))
       : 'stored on the server';
@@ -388,6 +393,11 @@ $('home').addEventListener('click', async (e) => {
 });
 
 $('ver').textContent = 'v' + browser.runtime.getManifest().version;
+
+// Tell right away when the instance is not reachable (wrong address,
+// not on the home network or VPN, missing permission).
+getBase().then((base) => fetch(base + '/healthz').then((r) => { if (!r.ok) throw new Error(); }))
+  .catch(async () => setStatus('Cannot reach ' + (await getBase()) + '. Check the address in Settings and your network or VPN.', true));
 
 // After opening, keep showing the last video (also if the context menu
 // started it).

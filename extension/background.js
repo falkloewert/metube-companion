@@ -6,7 +6,8 @@
 // with the web UI (PAYLOADS, ytId, canonical, language detection).
 if (typeof importScripts === 'function') importScripts('compat.js', 'shared.js');
 
-// ponytail: fixed placeholder, issue #4 makes the instance URL configurable at runtime
+// Desktop setup default; other instances are set on the options page, which
+// also asks for the host permission (optional_host_permissions).
 const DEFAULT_BASE = 'http://localhost:8081';
 
 // Cookies for these sites only. Never all cookies of the browser: they
@@ -140,7 +141,9 @@ async function notify(title, message) {
   } catch (_) { /* the notification is an extra, the badge is enough */ }
 }
 
-browser.runtime.onInstalled.addListener(() => {
+browser.runtime.onInstalled.addListener(async ({ reason }) => {
+  // First install: open the settings so the user picks the instance.
+  if (reason === 'install') browser.runtime.openOptionsPage();
   browser.contextMenus.create({
     id: 'metube-link',
     title: 'Send to MeTube',

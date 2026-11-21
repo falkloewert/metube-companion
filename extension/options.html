@@ -28,12 +28,15 @@
     }
     p { font-size: 13px; color: #59677a; }
     #status { min-height: 20px; }
+    #status.ok { color: #178a4c; }
+    #status.bad { color: #b3261e; }
   </style>
 </head>
 <body>
   <h1 style="font-size:20px">MeTube Companion</h1>
   <div class="card">
-    <label for="base">Address of the MeTube instance</label>
+    <p style="margin-top:0">Welcome! Enter the address of your MeTube Companion. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
+    <label for="base">Address of your MeTube Companion</label>
     <input id="base" type="url" placeholder="http://localhost:8081" spellcheck="false">
     <button id="save">Save</button>
     <p id="status" role="status" aria-live="polite"></p>

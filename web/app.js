@@ -378,12 +378,13 @@ function makeNode() {
   const actions = document.createElement('div');
   actions.className = 'actions';
   const b = {
+    report: button('', 'Report this problem on GitHub', ICON.report, 'a'),
     open: button('open', 'Open original', ICON.open, 'a'),
     del: button('del', 'Delete', ICON.del),
   };
   b.del.insertAdjacentHTML('beforeend', '<span class="ask">Delete?</span>');
-  b.open.target = '_blank';
-  b.open.rel = 'noopener';
+  b.open.target = b.report.target = '_blank';
+  b.open.rel = b.report.rel = 'noopener';
   Object.values(b).forEach((x) => actions.appendChild(x));
   li.appendChild(actions);
 
@@ -614,10 +615,11 @@ function update(n, item, where) {
   }
 
   if (web) b.open.href = item.url;
+  if (failed) b.report.href = reportUrl(item, 'web');
   b.del.title = running ? 'Cancel' : 'Delete, with all formats';
   if (!n.files.captions && !n.panel.hidden) toggleText(n, false);
 
-  const show = { open: !running && web, del: true };
+  const show = { report: failed, open: !running && web, del: true };
   Object.keys(show).forEach((k) => { b[k].hidden = !show[k]; });
   if (moved) {
     li.classList.add('arrive');
@@ -683,11 +685,58 @@ async function doRefresh() {
     for (const [key, n] of nodes) if (!seen.has(key)) { n.li.remove(); nodes.delete(key); }
     el.active.closest('section').hidden = fresh.length === 0;
     el.doneEmpty.hidden = done.length > 0;
+    lastDone = done;
+    clear.btn.hidden = done.length === 0;
+    if (!done.length) clear.bar.hidden = true;
   } catch (e) {
     setConn(false);
     if (e.message) el.conn.title = e.message;
   }
 }
+
+// ---- Clear all ---------------------------------------------------------------
+// Removes every finished entry from the history, optionally with all files of
+// all formats. Running jobs are left alone.
+
+const clear = { btn: $('clearall'), bar: $('clearbar'), q: $('clearq') };
+let lastDone = [];
+
+clear.btn.addEventListener('click', () => {
+  const n = lastDone.length;
+  clear.q.textContent = 'Delete ' + n + (n === 1 ? ' video' : ' videos') + ' with all their files?';
+  clear.bar.hidden = false;
+  $('clear-cancel').focus();
+});
+$('clear-cancel').addEventListener('click', () => { clear.bar.hidden = true; });
+
+async function clearAll(withFiles) {
+  const items = lastDone.slice();
+  const buttons = clear.bar.querySelectorAll('button');
+  buttons.forEach((x) => { x.disabled = true; });
+  try {
+    listingsAt = 0;
+    await loadListings(items);
+    const files = withFiles ? items.flatMap((i) => siblingsOf(i)) : [];
+    const res = await post('/delete', { ids: items.map((i) => i.url), where: 'done', delete_files: withFiles });
+    if (res && res.status === 'error') throw new Error(res.msg || 'MeTube refused.');
+    const gone = await Promise.all([...new Set(files)].map((rel) =>
+      fetch('/files/' + rel.split('/').map(encodeURIComponent).join('/'), { method: 'DELETE' })
+        .then((r) => r.ok || r.status === 404, () => false)));
+    items.forEach((i) => { delete stems[i.url]; });
+    saveStems();
+    if (gone.includes(false)) throw new Error('some files could not be deleted.');
+    toast(withFiles ? 'History and files deleted.' : 'History cleared, files kept.');
+    clear.bar.hidden = true;
+  } catch (e) {
+    toast('That did not work: ' + e.message, true);
+  } finally {
+    buttons.forEach((x) => { x.disabled = false; });
+    listingsAt = 0;
+    refresh();
+  }
+}
+$('clear-files').addEventListener('click', () => clearAll(true));
+$('clear-history').addEventListener('click', () => clearAll(false));
 
 // ---- Cookies ---------------------------------------------------------------
 

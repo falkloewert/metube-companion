@@ -8,7 +8,10 @@
       "id": "metube-companion@falkloewert",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
-        "required": ["authenticationInfo", "browsingActivity"]
+        "required": [
+          "authenticationInfo",
+          "browsingActivity"
+        ]
       }
     },
     "gecko_android": {
@@ -30,7 +33,10 @@
     "https://*.tiktok.com/*"
   ],
   "background": {
-    "scripts": ["shared.js", "background.js"],
+    "scripts": [
+      "shared.js",
+      "background.js"
+    ],
     "persistent": false
   },
   "browser_action": {
@@ -49,5 +55,9 @@
   "options_ui": {
     "page": "options.html",
     "open_in_tab": true
-  }
+  },
+  "optional_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ]
 }

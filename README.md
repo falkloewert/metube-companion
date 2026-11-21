@@ -2,6 +2,8 @@
 
 > **Status: work in progress, not released yet.** The code currently lives in a private homelab and is being turned into a standalone project. See the [v0.1.0 milestone](../../milestone/1) for the plan.
 
+> **Installing with an AI assistant?** Give it the link to this repository and ask it to follow [INSTALL.md](INSTALL.md). It explains what MeTube Companion is and walks through every decision (where to run it, automatic deletion, cookies, updates).
+
 A friendlier web UI and browser extension for [MeTube](https://github.com/alexta69/metube), the self-hosted web UI for yt-dlp. It runs next to a stock MeTube instance and does not modify it.
 
 ## What it does
@@ -11,7 +13,8 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 - **Transcripts that just work.** Detects whether a YouTube video is spoken in English or German (including AI-dubbed videos), fetches the original caption track to dodge YouTube's 429 errors, and turns captions into clean text. Preview, copy, or save as Markdown.
 - **Browser extension** (Chromium and Firefox). Sends the current tab with the cookies MeTube needs for signed-in content, shows the same format cells, and notifies you when a download is done.
 - **Installable on Android**, with a share target: share a link from the YouTube app straight to your instance.
-- **Housekeeping.** Shows how long files stay before automatic cleanup and deletes all formats of a video at once.
+- **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once, clears the whole history with or without files.
+- **Report problems** straight from a failed download: opens a prefilled GitHub issue.
 
 ## Quick start
 
@@ -25,7 +28,7 @@ docker compose -f compose.desktop.yml up -d
 
 Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at noon, so YouTube changes are picked up automatically.
 
-**Next to an existing MeTube** (server, NAS): copy the `companion` service from [`compose.server.yml`](compose.server.yml) into the compose file that runs MeTube, add the three required MeTube settings marked there, and open `http://<server>:8082`.
+**Next to an existing MeTube** (server, NAS): copy the `companion` service from [`compose.server.yml`](compose.server.yml) into the compose file that runs MeTube, add the four required MeTube settings marked there, and open `http://<server>:8082`.
 
 ### Configuration
 

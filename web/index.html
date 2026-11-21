@@ -51,7 +51,18 @@
     </section>
 
     <section class="group" aria-labelledby="done-title">
-      <h2 id="done-title">History</h2>
+      <div class="grouphead">
+        <h2 id="done-title">History</h2>
+        <button type="button" class="clearall" id="clearall" hidden>Clear all</button>
+      </div>
+      <div class="clearbar" id="clearbar" hidden role="alertdialog" aria-labelledby="clearq">
+        <p id="clearq"></p>
+        <div class="row">
+          <button type="button" class="btn danger" id="clear-files">Delete all</button>
+          <button type="button" class="btn" id="clear-history">History only</button>
+          <button type="button" class="btn" id="clear-cancel">Cancel</button>
+        </div>
+      </div>
       <ul id="done" class="list"></ul>
       <p id="done-empty" class="empty">Nothing downloaded yet.</p>
     </section>

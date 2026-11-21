@@ -5,12 +5,37 @@
 // progress, icons. Pure functions and constants only, no DOM, no fetch.
 // The extension gets this file at build time (extension/build.sh).
 
+// Bump together with the extension manifests on every release.
+const COMPANION_VERSION = '0.1.0';
+const ISSUES_URL = 'https://github.com/falkloewert/metube-companion/issues/new';
+
+// Prefilled bug report. Opens GitHub in the browser; nothing is sent until
+// the user submits it there, so they can remove the link if it is private.
+function reportUrl(info, where) {
+  const lines = [
+    '**What happened**',
+    '',
+    '<!-- describe what you did and what you expected -->',
+    '',
+    '**Details**',
+    '',
+    '- MeTube Companion: ' + COMPANION_VERSION + ' (' + where + ')',
+    '- Format: ' + ((info && info.download_type) || 'unknown'),
+    '- Status: ' + ((info && info.status) || 'unknown'),
+    '- MeTube message: ' + ((info && (info.msg || info.error)) || 'none'),
+    '- Link: ' + ((info && info.url) || 'unknown') + ' (remove if private)',
+  ];
+  return ISSUES_URL + '?labels=bug&title=' + encodeURIComponent('Download fails: ' + ((info && info.title) || 'short description')) +
+    '&body=' + encodeURIComponent(lines.join('\n'));
+}
+
 const ICON = {
   video: '<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9.5v5l4.5-2.5z"/></svg>',
   audio: '<svg viewBox="0 0 24 24"><path d="M9 18V6l11-2v12"/><circle cx="6" cy="18" r="3"/><circle cx="17" cy="16" r="3"/></svg>',
   captions: '<svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h16M4 14h11M4 18h7"/></svg>',
   md: '<svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 11v6m-2.5-2.5L12 17l2.5-2.5"/></svg>',
   copy: '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h8"/></svg>',
+  report: '<svg viewBox="0 0 24 24"><path d="M5 21V4m0 0h11l-2 4 2 4H5"/></svg>',
   open: '<svg viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>',
   thumbnail: '<svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><circle cx="9" cy="10" r="2"/><path d="M21 16l-5-5-9 9"/></svg>',
   del: '<svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3"/></svg>',

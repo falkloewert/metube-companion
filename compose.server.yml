@@ -20,6 +20,8 @@ services:
       YTDL_OPTIONS_PRESETS: '{"text": {"ignoreerrors": true}}'
       # required: real file times (for the "days left" hint and cleanup)
       YTDL_OPTIONS: '{"mtime": false}'
+      # required: the companion decides per request whether files are deleted
+      DELETE_FILE_ON_TRASHCAN: "ask"
     volumes:
       - /path/to/downloads:/downloads
 

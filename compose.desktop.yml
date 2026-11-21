@@ -19,7 +19,8 @@ services:
       DOWNLOAD_DIR: /downloads
       STATE_DIR: /state
       TEMP_DIR: /downloads/.tmp
-      DELETE_FILE_ON_TRASHCAN: "true"
+      # The companion decides per request (delete all formats, or "History only").
+      DELETE_FILE_ON_TRASHCAN: "ask"
       # Required by the companion: video ID in file names (groups the formats
       # of a video), the "text" preset (a failed caption track is a warning,
       # not an error) and real file times (for the "days left" hint).
