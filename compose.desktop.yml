@@ -1,0 +1,60 @@
+# MeTube Companion on your own computer (Docker Desktop on Windows/macOS,
+# Docker on Linux). Starts MeTube and the companion together.
+#
+#   docker compose -f compose.desktop.yml up -d
+#   open http://localhost:8081
+#
+# Only reachable from this computer (127.0.0.1), so no login is needed.
+# Downloads land in METUBE_DOWNLOADS (default: ./downloads next to this file).
+
+services:
+  metube:
+    image: ghcr.io/alexta69/metube:latest
+    restart: unless-stopped
+    environment:
+      # Owner of the downloads; on Linux run `id` to see yours. Docker Desktop
+      # on Windows/macOS ignores this.
+      PUID: "${PUID:-1000}"
+      PGID: "${PGID:-1000}"
+      DOWNLOAD_DIR: /downloads
+      STATE_DIR: /state
+      TEMP_DIR: /downloads/.tmp
+      DELETE_FILE_ON_TRASHCAN: "true"
+      # Required by the companion: video ID in file names (groups the formats
+      # of a video), the "text" preset (a failed caption track is a warning,
+      # not an error) and real file times (for the "days left" hint).
+      OUTPUT_TEMPLATE: "%(title)s [%(id)s].%(ext)s"
+      YTDL_OPTIONS_PRESETS: '{"text": {"ignoreerrors": true}}'
+      YTDL_OPTIONS: '{"mtime": false}'
+      # YouTube changes often; MeTube updates yt-dlp itself every day at this
+      # time (while the computer is on).
+      YTDL_NIGHTLY_UPDATE_TIME: "12:00"
+    volumes:
+      - "${METUBE_DOWNLOADS:-./downloads}:/downloads"
+      - metube-state:/state
+
+  companion:
+    image: ghcr.io/falkloewert/metube-companion:latest
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    depends_on:
+      - metube
+    environment:
+      METUBE_URL: http://metube:8081
+      # Files stay until you delete them. Set e.g. 30 to clean up automatically.
+      RETENTION_DAYS: "0"
+    ports:
+      - "127.0.0.1:8081:8080"
+    volumes:
+      - "${METUBE_DOWNLOADS:-./downloads}:/downloads"
+
+  # Optional: keep the images themselves up to date (needs the Docker socket).
+  # updater:
+  #   image: ghcr.io/nicholas-fedor/watchtower:latest
+  #   restart: unless-stopped
+  #   command: --cleanup --interval 86400
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+
+volumes:
+  metube-state:

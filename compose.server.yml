@@ -1,0 +1,40 @@
+# MeTube Companion next to an existing MeTube (server, NAS, homelab).
+#
+# 1. Add the companion service below to the compose file that runs MeTube
+#    (same file = same network, so http://metube:8081 resolves).
+# 2. Add the three settings marked "required" to your MeTube service.
+# 3. docker compose up -d, then open http://<server>:8082
+#
+# No login: keep it on your home network or VPN, or put an authenticating
+# reverse proxy in front. Never expose it to the internet as is.
+
+services:
+  metube:
+    image: ghcr.io/alexta69/metube:latest
+    # ... your existing settings ...
+    environment:
+      DOWNLOAD_DIR: /downloads
+      # required: video ID in file names (groups the formats of a video)
+      OUTPUT_TEMPLATE: "%(title)s [%(id)s].%(ext)s"
+      # required: a failed caption track is a warning, not an error
+      YTDL_OPTIONS_PRESETS: '{"text": {"ignoreerrors": true}}'
+      # required: real file times (for the "days left" hint and cleanup)
+      YTDL_OPTIONS: '{"mtime": false}'
+    volumes:
+      - /path/to/downloads:/downloads
+
+  companion:
+    image: ghcr.io/falkloewert/metube-companion:latest
+    restart: unless-stopped
+    # Owner of the downloads folder (run `id` on the server): needed to delete files.
+    user: "1000:1000"
+    depends_on:
+      - metube
+    environment:
+      METUBE_URL: http://metube:8081
+      # Delete files after this many days (0 = keep forever).
+      RETENTION_DAYS: "30"
+    ports:
+      - "8082:8080"
+    volumes:
+      - /path/to/downloads:/downloads

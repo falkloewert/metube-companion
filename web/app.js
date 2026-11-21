@@ -236,7 +236,8 @@ function flash(btn) {
 // name stem as the job's file.
 
 const listings = new Map();   // folder -> Map file name -> mtime (ms)
-const KEEP_DAYS = 30;         // must match the cleanup setting (files older than this are deleted)
+// Days until the cleanup deletes a file (RETENTION_DAYS, via /config.js); 0 = never.
+const KEEP_DAYS = Number((window.COMPANION || {}).keepDays) || 0;
 let listingsAt = 0;
 let listingsSig = '';
 
@@ -301,6 +302,7 @@ function ageText(files) {
   const startOf = (t) => new Date(t).setHours(0, 0, 0, 0);
   const ago = Math.round((startOf(Date.now()) - startOf(newest)) / day);
   const when = ago <= 0 ? 'today' : ago === 1 ? 'yesterday' : ago + ' days ago';
+  if (!KEEP_DAYS) return when;
   const left = Math.max(0, Math.ceil((Math.min(...times) + KEEP_DAYS * day - Date.now()) / day));
   return when + ' · ' + (left <= 1 ? 'deleted soon' : left + ' days left');
 }
