@@ -5,7 +5,7 @@ Copy from here when submitting (#10). Package: the release assets `metube-compan
 ## Shared
 
 - **Name:** MeTube Companion
-- **Summary (max. 132 characters):** Send the current video to your own MeTube server: video, audio or transcript in two taps, optionally with your sign-in.
+- **Summary (max. 132 characters):** Send the current video to your own MeTube server: video, audio or transcript in one tap, optionally with your sign-in.
 - **Category:** Chrome: Productivity (Tools). Firefox: Download Management.
 - **Homepage / support:** https://github.com/falkloewert/metube-companion
 - **Privacy policy URL:** https://github.com/falkloewert/metube-companion/blob/main/docs/store/privacy.md
@@ -15,7 +15,7 @@ Copy from here when submitting (#10). Package: the release assets `metube-compan
 
 MeTube Companion sends the page you are on to your own MeTube server (a self-hosted web UI for yt-dlp). It needs the free MeTube Companion container next to MeTube; it does not download anything by itself. It talks only to your server (the language of a transcript is looked up there too) and loads video thumbnails for the popup from YouTube's image server, i.ytimg.com.
 
-- Video, Audio or Text: tap a tile once to pick, again to send.
+- Video, Audio or Text: one tap sends; tap again within 5 seconds to cancel.
 - Transcripts as plain text, ready to copy or save as Markdown; the spoken language is detected for YouTube.
 - Optional, off until you allow it on the settings page: sends your YouTube, Instagram or TikTok cookies with the link, for downloads that need your own sign-in. Other sites never get cookies.
 - Shows progress and notifies you when the download is done; save the file to this computer with one click.

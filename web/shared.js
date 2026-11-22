@@ -33,7 +33,7 @@ function translatePage(root) {
 }
 
 // Bump together with the extension manifests on every release.
-const COMPANION_VERSION = '0.4.1';
+const COMPANION_VERSION = '0.5.0';
 const ISSUES_URL = 'https://github.com/falkloewert/metube-companion/issues/new';
 
 // Prefilled bug report. Opens GitHub in the browser; nothing is sent until
@@ -363,35 +363,41 @@ function setThumb(el, url, kind, allowThumb, lazy) {
   if (thumb) el.firstChild.src = thumb;
 }
 
-// Two-tap tiles: first tap selects, second tap sends. Esc, outside click or 4 s cancels.
-function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
+// One tap sends. Right after, the tile offers "cancel?" for a few seconds, so
+// an accidental tap is undone before the server spends minutes on it.
+const UNDO_MS = 5000;
+
+// Cancels a just-sent job; false if it already finished (a short transcript),
+// then it stays and is deleted on its card. MeTube answers "ok" either way and
+// stops a running download only when yt-dlp exits, so the history is checked
+// before and watched until the job is gone.
+async function cancelJob(url, history, del) {
+  const queued = (h) => [].concat(h.queue || [], h.pending || []).some((i) => i.url === url);
+  if (!queued(await history())) return false;
+  await del(url);
+  for (let i = 0; i < 40 && queued(await history()); i++) await new Promise((r) => setTimeout(r, 500));
+  return true;
+}
+
+function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent, onCancel }) {
   tiles.querySelectorAll('.tile').forEach((el) => {
     el.insertAdjacentHTML('afterbegin', ICON[el.dataset.kind].replace('<svg', '<svg class="ico"') + SPIN + CHECK('check'));
     el.insertAdjacentHTML('beforeend',
-      '<span class="ask">' + t('tap again') + '</span><span class="busytxt">' + t('sending …') +
+      '<span class="ask">' + t('cancel?') + '</span><span class="busytxt">' + t('sending …') +
       '</span><span class="donetxt">' + t('sent') + '</span>');
   });
 
-  let armed = null;
-  let armedMsg = '';
-  let armTimer = null;
+  let undo = null;   // { kind, url, timer } while the last send can be cancelled
   let sending = false;
+  let sendId = 0;    // a reset during the "sent" animation drops the undo offer
   const tile = (kind) => tiles.querySelector('[data-kind="' + kind + '"]');
 
-  function disarm() {
-    clearTimeout(armTimer);
-    if (armed && statusEl.textContent === armedMsg) setStatus('');
-    armed = null;
-    tiles.classList.remove('armed');
-    tiles.querySelectorAll('.tile').forEach((t) => t.classList.remove('armed'));
-  }
-
-  function arm(kind) {
-    disarm();
-    armed = kind;
-    tiles.classList.add('armed');
-    tile(kind).classList.add('armed');
-    armTimer = setTimeout(disarm, 4000);
+  function endUndo() {
+    sendId++;
+    if (!undo) return;
+    clearTimeout(undo.timer);
+    tile(undo.kind).classList.remove('undo');
+    undo = null;
   }
 
   function burst(tileEl) {
@@ -415,33 +421,63 @@ function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
     setStatus(msg, true);
   }
 
+  async function cancel() {
+    const { url } = undo;
+    endUndo();
+    sending = true;
+    tiles.classList.add('sending');
+    setStatus(t('Cancelling …'));
+    try {
+      if (await onCancel(url)) {
+        setStatus(t('Cancelled.'));
+        if (!urlInput.value) {
+          urlInput.value = url;
+          urlInput.dispatchEvent(new Event('input'));
+        }
+      } else {
+        setStatus(t('Already finished. Delete it on its card if you do not want it.'));
+      }
+    } catch (err) {
+      setStatus(t('Cancel did not work: {msg}', { msg: err.message }), true);
+    }
+    tiles.classList.remove('sending');
+    sending = false;
+  }
+
+  // A new link means a new job: the tile sends it instead of cancelling.
+  urlInput.addEventListener('input', () => { if (urlInput.value.trim()) endUndo(); });
+
   tiles.addEventListener('click', async (e) => {
     const tileEl = e.target.closest('.tile');
     if (!tileEl || sending) return;
+    const kind = tileEl.dataset.kind;
+    if (undo && undo.kind === kind && !urlInput.value.trim()) { await cancel(); return; }
+    endUndo();
     const url = urlInput.value.trim();
     if (!url) { shakeUrl(t('Paste a link first.')); return; }
     if (!isWebUrl(url)) { shakeUrl(t('That does not look like a link.')); return; }
-    const kind = tileEl.dataset.kind;
-    if (armed !== kind) {
-      arm(kind);
-      armedMsg = t('Tap "{label}" again to start.', { label: t(LABEL[kind]) });
-      setStatus(armedMsg);
-      return;
-    }
-    disarm();
     sending = true;
     tiles.classList.add('sending');
     tileEl.classList.add('busy');
     setStatus(kind === 'captions' ? t('Detecting language …') : t('Sending …'));
     try {
-      const res = await onSend(canonical(url), kind);
+      const sent = canonical(url);
+      const res = await onSend(sent, kind);
       tileEl.classList.remove('busy');
       tileEl.classList.add('done');
       burst(tileEl);
       setStatus(res.status);
       urlInput.value = '';
       if (onSent) onSent(res);
-      setTimeout(() => { tileEl.classList.remove('done'); tiles.classList.remove('sending'); sending = false; }, 1300);
+      const id = ++sendId;
+      setTimeout(() => {
+        tileEl.classList.remove('done');
+        tiles.classList.remove('sending');
+        sending = false;
+        if (id !== sendId) return;
+        tileEl.classList.add('undo');
+        undo = { kind, url: res.url || sent, timer: setTimeout(endUndo, UNDO_MS) };
+      }, 900);
     } catch (err) {
       tileEl.classList.remove('busy');
       tileEl.classList.add('fail');
@@ -450,10 +486,9 @@ function initTiles({ tiles, urlInput, statusEl, setStatus, onSend, onSent }) {
     }
   });
 
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && armed) { e.preventDefault(); disarm(); } });
-  document.addEventListener('click', (e) => { if (armed && !e.target.closest('.tile')) disarm(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && undo) { e.preventDefault(); endUndo(); } });
 
-  return { disarm, click: () => tile(armed || 'video').click() };
+  return { reset: endUndo, send: () => { endUndo(); tile('video').click(); } };
 }
 
 function makeFormatCells(container) {

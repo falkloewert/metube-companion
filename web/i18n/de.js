@@ -39,8 +39,8 @@
     'Search titles': 'Titel suchen',
     'Failed': 'Fehlgeschlagen',
     'No matches.': 'Keine Treffer.',
-    'Nothing downloaded yet. Paste a link above and tap a format twice.':
-      'Noch nichts heruntergeladen. Füge oben einen Link ein und tippe zweimal auf ein Format.',
+    'Nothing downloaded yet. Paste a link above and tap a format.':
+      'Noch nichts heruntergeladen. Füge oben einen Link ein und tippe auf ein Format.',
     'Trash': 'Papierkorb',
     'Deleted videos wait here for <span id="trash-days"></span>, then they are removed for good. "Restore" puts all their files back and the video shows up in the history again.':
       'Gelöschte Videos bleiben hier <span id="trash-days"></span>, danach werden sie endgültig entfernt. „Wiederherstellen“ bringt alle Dateien zurück und das Video erscheint wieder im Verlauf.',
@@ -78,7 +78,6 @@
     'loading {pct} %': 'lädt {pct} %',
     '{label}: only when the running job is done': '{label}: erst, wenn der laufende Auftrag fertig ist',
     '{label} is loading.': '{label} wird geladen.',
-    'tap again': 'nochmal',
     'sending …': 'sendet …',
     'sent': 'gesendet',
 
@@ -99,7 +98,6 @@
     'no file': 'keine Datei',
     'Paste a link first.': 'Füge zuerst einen Link ein.',
     'That does not look like a link.': 'Das sieht nicht nach einem Link aus.',
-    'Tap "{label}" again to start.': 'Tippe nochmal auf „{label}“, um zu starten.',
     'Detecting language …': 'Erkenne Sprache …',
     'Sending …': 'Sende …',
     'That did not work.': 'Das hat nicht geklappt.',
@@ -110,6 +108,8 @@
     'Preview · {n} words': 'Vorschau · {n} Wörter',
     'Could not load text: {msg}': 'Text konnte nicht geladen werden: {msg}',
     'Cancelled.': 'Abgebrochen.',
+    'Cancelling …': 'Wird abgebrochen …',
+    'Already finished. Delete it on its card if you do not want it.': 'Schon fertig. Lösche es auf seiner Karte, wenn du es nicht willst.',
     'Cancel did not work: {msg}': 'Abbrechen hat nicht geklappt: {msg}',
     'Download failed: {msg}': 'Download fehlgeschlagen: {msg}',
 

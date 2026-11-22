@@ -162,6 +162,7 @@ async function extensionPart() {
     }
     if (!opts) throw new Error('settings page did not open');
     await opts.fill('#base', BASE);
+    await opts.check('#cookies');
     await opts.click('#save');
     await opts.locator('#status', { hasText: 'Saved and connected' }).waitFor({ timeout: 15000 });
     const page = await ctx.newPage();
@@ -261,12 +262,8 @@ async function extensionPart() {
     mark('popup');
     await x.glide(T.video[0], T.video[1], 600);
     await sleep(200);
-    await x.click(); ev('tile');      // first tap: selected
-    await sleep(700);
-    mark('armed');
-    await caption('Two taps. Your cookies go along, so sign-in-only videos work.');
-    await sleep(300);
-    await x.click(); ev('send');      // second tap: sent
+    await x.click(); ev('send');      // one tap sends
+    await caption('One tap. Your cookies go along, so sign-in-only videos work.');
     await sleep(1500);
     mark('sent');
 
@@ -657,8 +654,7 @@ async function webParts(browser) {
   await hold(0.9);
   await mark('phone-shared');
   const tile = phone.locator('.tile[data-kind=video]');
-  await tap(tile, { pause: 500 }); ev('tile', lastTap);
-  await tap(tile, { pause: 400 }); ev('send', lastTap);
+  await tap(tile, { pause: 500 }); ev('send', lastTap);
   await sped(() => phone.locator('#done .item', { hasText: 'Engine Section' }).locator('.fmt[data-kind=video][data-state=have]').waitFor({ timeout: 180000 })); ev('done', lastDone);
   await hold(1.0);
   await mark('phone-done');

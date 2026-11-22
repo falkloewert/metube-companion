@@ -39,15 +39,28 @@ test('Seeded history renders both cards with the right format cells', async ({ p
     .toBe(true);
 });
 
+test('A second tap on the tile right after sending cancels the job', async ({ page }) => {
+  await page.goto('/');
+  await page.locator('#url').fill(SINTEL_URL);
+  const videoTile = page.locator('#tiles .tile[data-kind="video"]');
+  await videoTile.click();
+  await expect(page.locator('#status')).toContainText('Sent');
+  await expect(videoTile).toHaveClass(/undo/);
+  await expect(videoTile.locator('.ask')).toHaveText('cancel?');
+  await videoTile.click();
+  await expect(page.locator('#status')).toContainText('Cancelled');
+  await expect(page.locator('#url')).toHaveValue(SINTEL_URL);
+  await expect(page.locator('#active .item').filter({ hasText: 'Sintel' })).toHaveCount(0, { timeout: 5_000 });
+  await expect(page.locator('#done .item').filter({ hasText: 'Sintel' })).toHaveCount(0);
+});
+
 test('Adding a link shows progress and ends with a saved audio cell; /add payload is recorded', async ({ page, request }) => {
   await page.goto('/');
   await expect(page.locator('#done .item')).toHaveCount(2);
 
   await page.locator('#url').fill(SINTEL_URL);
   const audioTile = page.locator('#tiles .tile[data-kind="audio"]');
-  await audioTile.click(); // first tap selects
-  await expect(page.locator('#status')).toContainText('again to start');
-  await audioTile.click(); // second tap sends
+  await audioTile.click(); // one tap sends
   await expect(page.locator('#status')).toContainText('Sent');
 
   // Running card: progress goes from "starting" to "loading N %".

@@ -71,13 +71,12 @@ test('Level 1 focused proof (#21): English browser, German browser, German downl
   });
 
   // Step 3/5: a download in German, from tap to saved
-  await session.beginStep(3, TOTAL_STEPS, 'Download in German: tap Audio twice');
+  await session.beginStep(3, TOTAL_STEPS, 'Download in German: tap Audio');
   await humanType(page, page.locator('#url'), SINTEL_URL, { charDelayMs: 28 });
   const audioTile = page.locator('#tiles .tile[data-kind="audio"]');
   await highlightAndClick(page, audioTile);
-  await expect(page.locator('#status')).toContainText('Tippe nochmal auf „Audio“');
-  await highlightAndClick(page, audioTile);
   await expect(page.locator('#status')).toContainText('Gesendet');
+  await expect(audioTile.locator('.ask')).toHaveText('abbrechen?');
   await expect(page.locator('#active-title')).toHaveText('Läuft');
   const running = page.locator('#active .item').filter({ hasText: 'Sintel' });
   await expect(running.locator('.meta')).toContainText(/lädt \d+ %/);
@@ -87,14 +86,13 @@ test('Level 1 focused proof (#21): English browser, German browser, German downl
   await highlightLocator(page, sintel.locator('.fmt[data-kind="audio"]'));
   await session.finishStep({
     screenshotFile: '03-german-download.png',
-    assertion: 'Tile flow, status ("Tippe nochmal …", "Gesendet."), section "Läuft" and progress ("lädt N %") are German; the Sintel audio cell ends as "speichern"',
+    assertion: 'Tile flow, status ("Gesendet.", tile "abbrechen?"), section "Läuft" and progress ("lädt N %") are German; the Sintel audio cell ends as "speichern"',
   });
 
   // Step 4/5: a failed download explains itself in German
   await session.beginStep(4, TOTAL_STEPS, 'Failed download: reason in German');
   await humanType(page, page.locator('#url'), UNKNOWN_URL, { charDelayMs: 28 });
   const videoTile = page.locator('#tiles .tile[data-kind="video"]');
-  await highlightAndClick(page, videoTile);
   await highlightAndClick(page, videoTile);
   const failed = cards.filter({ hasText: 'xxxxxxxxxxx' });
   await expect(failed).toContainText('Das Video ist privat oder nicht verfügbar.', { timeout: 10_000 });

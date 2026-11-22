@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 - 2026-11-22
+
+- Web UI and extension: one tap on Video, Audio or Text sends right away. For 5 seconds the tile then shows "cancel?"; a second tap cancels the job, MeTube stops the download and keeps no file. Before, the first tap only selected and a second tap sent; that cost a tap every time to guard against a rare mistake. Enter in the web UI's link field sends as Video. A job that already finished in those seconds (a short transcript) stays and says so.
+- Extension: no "done" or "error" notification for a cancelled job.
+- Web UI: may be framed by its own origin (the demo stage); other sites still cannot.
+- Demo video re-recorded with the one-tap flow.
+
 ## 0.4.1 - 2026-11-22
 
 - Extension: installed from the store without the server part? The settings page says up front that MeTube Companion has to run on your computer or server and links the setup guide; the popup shows "No MeTube Companion yet? How to set it up" when it cannot reach the instance.

@@ -130,6 +130,10 @@ browser.contextMenus.onClicked.addListener(async (info) => {
 });
 
 browser.runtime.onMessage.addListener((msg, _sender, reply) => {
+  if (msg && msg.type === 'forget') {
+    dropPending(msg.url).then(() => reply(true), () => reply(false));
+    return true;
+  }
   if (!msg || msg.type !== 'send') return false;
   startSend(msg.url, msg.kind)
     .then((r) => { reply({ ok: true, withCookies: r.n > 0, lang: r.lang, url: r.url }); })
@@ -240,6 +244,8 @@ async function watchFast(url) {
   for (let i = 0; i < 8; i++) {
     await new Promise((r) => setTimeout(r, 4000));
     await browser.runtime.getPlatformInfo(); // keeps the worker alive
+    const { pending = [] } = await browser.storage.local.get('pending');
+    if (!pending.some((j) => j.url === url)) return; // cancelled in the popup
     let item;
     try { item = (await historyItems()).find((x) => x.url === url); } catch (_) { continue; }
     if (!item) continue;

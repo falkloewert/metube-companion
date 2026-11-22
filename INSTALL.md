@@ -10,7 +10,7 @@ The companion adds:
 
 - **Four formats per link:** video, audio (m4a), text (transcript) and thumbnail. One card per video shows all four: *save* what exists, *request* what is missing, progress runs inside the cell.
 - **Transcripts:** for YouTube it detects whether the video is spoken in English or German (also for AI-dubbed videos), uses the original caption track (avoids YouTube's 429 errors) and turns captions into plain text. Preview, copy, or save as Markdown.
-- **Browser extension** for Chromium browsers (Chrome, Brave, Edge) and Firefox: send the current tab in two taps, with the cookies needed for signed-in content.
+- **Browser extension** for Chromium browsers (Chrome, Brave, Edge) and Firefox: send the current tab in one tap, with the cookies needed for signed-in content.
 - **Housekeeping:** delete a video with all its formats, clear the whole history, optional automatic deletion after N days.
 - **Android:** installable as an app with a share target (share a link from the YouTube app). Only in Chrome on Android and only over HTTPS or localhost.
 
@@ -89,7 +89,7 @@ Existing MeTube files without the video ID in their name still work, but are gro
 
 - `curl -s http://localhost:8081/healthz` prints `ok` (use your host/port).
 - The web UI opens and shows "Connected".
-- Paste a public YouTube link, tap **Text** twice: within a minute a card appears with *Text: show*. If it fails with a sign-in message, see decision 8.
+- Paste a public YouTube link, tap **Text**: within a minute a card appears with *Text: show*. If it fails with a sign-in message, see decision 8.
 - On the card, tap **Image · request** (the thumbnail): the cell turns green, a `.jpg` appears in the download folder.
 - Delete the card (tap the trash twice): the files move to `.trash` in the download folder (with `TRASH_DAYS=0` they are deleted). Open **Trash** and tap **Restore**: the card comes back.
 

@@ -7,7 +7,7 @@ Every feature appears exactly once, in the place where people use it. Target 60 
 | # | On screen | Caption |
 |---|---|---|
 | 1 | A YouTube watch page (public-domain video). Cursor clicks the MeTube Companion icon in the toolbar; the popup opens with the link already filled in. | Watching something? Click the icon. The link is already there. |
-| 2 | Tap Video once (selected), tap again (sent). Status: sent with the YouTube cookies. | Two taps. Your cookies go along, so sign-in-only videos work. |
+| 2 | Tap Video once (sent). Status: sent with the YouTube cookies. | One tap. Your cookies go along, so sign-in-only videos work. |
 | 3 | The Video cell shows progress, then turns green. Sped-up part carries a badge with the real factor ("6x"). | It downloads on your own server. |
 | 4 | Done notification with "Download to this computer"; the file lands in the browser's downloads. | Done. Save it to this computer with one click. |
 | 5 | Right-click a link on the page: "Send to MeTube". | Or right-click any link. |
@@ -26,7 +26,7 @@ Every feature appears exactly once, in the place where people use it. Target 60 
 
 | # | On screen | Caption |
 |---|---|---|
-| 11 | Phone frame with the installed web app. The share menu itself cannot be recorded, so the app opens the way a share opens it (`/?url=...`, the share target of the manifest): link already in the field, Video tapped twice, a fresh card. | On Android it installs as an app and shows up in the share menu. |
+| 11 | Phone frame with the installed web app. The share menu itself cannot be recorded, so the app opens the way a share opens it (`/?url=...`, the share target of the manifest): link already in the field, Video tapped once, a fresh card. | On Android it installs as an app and shows up in the share menu. |
 
 ## End card, about 4 s
 

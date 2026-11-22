@@ -140,8 +140,8 @@ a.title:hover { text-decoration: underline; }
   .composer { display: grid; grid-template-columns: 1fr 360px; gap: 12px; align-items: center; }
   .composer .tiles { margin-top: 0; }
   .composer .tile { height: 64px; flex-direction: row; gap: 8px; }
-  .composer .tile.armed .ask { margin: 0; }
-  .composer .tile.armed .ico { display: none; }
+  .composer .tile.undo .ask { margin: 0; }
+  .composer .tile.undo .name, .composer .tile.undo .ico { display: none; }
   .composer .status { grid-column: 1 / -1; margin-top: 0; }
   .kind.thumb { width: 88px; height: 50px; }
 }

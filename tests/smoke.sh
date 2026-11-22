@@ -68,7 +68,7 @@ curl -s -D - -o /dev/null -H 'Host: rebind.example.com' -H 'Origin: chrome-exten
   && ok "extension can read the 421 hint" || bad "421 without CORS for the extension"
 curl -s -D - -o /dev/null -X OPTIONS -H 'Host: rebind.example.com' -H 'Origin: https://evil.example' "$B/ext/history" | grep -qi '^access-control' \
   && bad "421 gives CORS to a web page" || ok "421 gives no CORS to a web page"
-curl -sI "$B/" | grep -qi '^x-frame-options: DENY' && ok "web UI cannot be framed" || bad "web UI can be framed"
+curl -sI "$B/" | grep -qi "^content-security-policy: frame-ancestors 'self'" && ok "web UI cannot be framed by other sites" || bad "web UI can be framed"
 curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/ext/yt/jNQXAC9IVRw" \
   | grep -qi '^access-control-allow-origin: moz-extension://x' && ok "extension language lookup (/ext/yt/, CORS)" || bad "extension language lookup (/ext/yt/)"
 check 404 "MeTube live updates blocked on /ext/" "$B/ext/socket.io/?EIO=4&transport=polling"

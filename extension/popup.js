@@ -1,7 +1,7 @@
 'use strict';
 
-// Extension popup, same interaction as the web UI (web/app.js): tap a tile
-// once to select, tap again to send. Below it the last sent video with the
+// Extension popup, same interaction as the web UI (web/app.js): a tap on a
+// tile sends, a second tap within a few seconds cancels. Below it the last sent video with the
 // same format bar (Video, Audio, Text, Image). Shared helpers live in shared.js
 // and compat.js.
 
@@ -51,6 +51,17 @@ initTiles({
     return { url: res.url || url, status: (res.withCookies ? 'Sent, with cookies' : 'Sent, without cookies') + lang + '.' };
   },
   onSent: (res) => watch(res.url),
+  onCancel: async (url) => {
+    // The background stops watching first, so no "done" or "error"
+    // notification follows for a cancelled job.
+    await browser.runtime.sendMessage({ type: 'forget', url });
+    const done = await cancelJob(url, async () => (await ifetch((await getBase()) + '/ext/history')).json(), async (u) => {
+      const r = await extPost('/ext/delete', { ids: [u], where: 'queue' });
+      if (r && r.status === 'error') throw new Error(r.msg || 'MeTube refused.');
+    });
+    refreshJob();
+    return done;
+  },
 });
 
 // ---- Last video with format bar ----------------------------------------------

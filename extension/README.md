@@ -27,7 +27,7 @@ for s in 48 96 128; do convert -background none -density 400 -resize ${s}x${s} -
 
 ## Usage
 
-- **Toolbar button:** opens a small window with the current tab's link prefilled. Three tiles, Video, Audio, Text: tap once to select, tap again to send. Esc, a click elsewhere or 4 seconds of waiting cancels.
+- **Toolbar button:** opens a small window with the current tab's link prefilled. Three tiles, Video, Audio, Text: one tap sends; the tile then shows "cancel?" for 5 seconds, a second tap cancels the job (MeTube stops the download, nothing is kept).
 - **Last video:** below it, the last sent video with the same format bar as the web UI (Video, Audio, Text, Image). Each cell shows a verb ("save", "show", "request", "loading N %", "retry", "waiting"); a tap does what it says. Progress runs inside the cell and only moves forward.
 - **Text:** downloads the transcript. "show" opens a preview with word count, plus "Copy all" (running text) and "As .md" (title, source, text). The extension detects the spoken language from the YouTube page, fetched by your instance (`/ext/yt/<id>`, without cookies): the original audio track first (for AI-dubbed videos the default track is often German), then the only automatic caption track, then manual captions. English stays English, everything else becomes German.
 - **Right-click** on a link or page: "Send to MeTube" (always video).

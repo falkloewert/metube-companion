@@ -40,11 +40,14 @@ export NODE_PATH="${NODE_PATH:-$(npm root -g 2>/dev/null || true)}"
 # otherwise, which nobody can click here.
 "$ROOT/extension/build.sh" >/dev/null
 python3 -m zipfile -e "$ROOT/extension/dist/metube-companion-chromium.zip" "$WORK/ext"
-python3 - "$WORK/ext/manifest.json" "$PORT" <<'PY'
+# The cookies are optional (asked on the settings page); the demo package
+# grants them up front, so ticking the box needs no browser prompt.
+python3 - "$WORK/ext/manifest.json" <<'PY'
 import json, sys
-path, port = sys.argv[1], sys.argv[2]
+path = sys.argv[1]
 m = json.load(open(path))
-m['host_permissions'].append(f'http://localhost:{port}/*')
+m['permissions'] += m.pop('optional_permissions', [])
+m['host_permissions'] = m.pop('optional_host_permissions', [])
 json.dump(m, open(path, 'w'), indent=1)
 PY
 

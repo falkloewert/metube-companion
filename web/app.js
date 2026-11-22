@@ -1,7 +1,7 @@
 'use strict';
 
-// Same interaction as the extension (extension/popup.js): tap a tile once to
-// select, tap again to send. Entries stay in the DOM as nodes and are only
+// Same interaction as the extension (extension/popup.js): a tap on a tile
+// sends, a second tap within a few seconds cancels. Entries stay in the DOM as nodes and are only
 // updated, so animations and state do not restart on each 2 s poll.
 
 translatePage();
@@ -123,11 +123,19 @@ const tileCtl = initTiles({
     return { status: lang ? t('Sent, text in {lang}.', { lang: lang === 'en' ? t('English') : t('German') }) : t('Sent.') };
   },
   onSent: () => { syncUrlBtn(); refresh(); },
+  onCancel: async (url) => {
+    const done = await cancelJob(url, () => api('/history'), async (u) => {
+      const res = await post('/delete', { ids: [u], where: 'queue' });
+      if (res && res.status === 'error') throw new Error(res.msg || t('MeTube refused.'));
+    });
+    refresh();
+    return done;
+  },
 });
 
 el.url.addEventListener('input', syncUrlBtn);
 urlBtn.addEventListener('click', async () => {
-  if (el.url.value) { el.url.value = ''; tileCtl.disarm(); syncUrlBtn(); el.url.focus(); return; }
+  if (el.url.value) { el.url.value = ''; tileCtl.reset(); syncUrlBtn(); el.url.focus(); return; }
   try {
     el.url.value = (await navigator.clipboard.readText()).trim();
     syncUrlBtn();
@@ -138,11 +146,11 @@ urlBtn.addEventListener('click', async () => {
   }
 });
 
-// Enter in the field acts like a tap: selects Video, a second Enter sends.
+// Enter in the field sends as Video.
 el.url.addEventListener('keydown', (e) => {
   if (e.key !== 'Enter') return;
   e.preventDefault();
-  tileCtl.click();
+  tileCtl.send();
 });
 
 // ---- Display helpers ---------------------------------------------------------

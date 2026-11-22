@@ -45,18 +45,17 @@ button:focus-visible, a:focus-visible, input:focus-visible, summary:focus-visibl
 .tile svg { width: 26px; height: 26px; }
 .tile:hover { color: var(--text); }
 .tile:active { transform: scale(.94); }
-.tiles.armed .tile:not(.armed), .tiles.sending .tile:not(.busy):not(.done):not(.fail) { opacity: .72; }
+.tiles.sending .tile:not(.busy):not(.done):not(.fail) { opacity: .72; }
 .tiles.sending .tile { pointer-events: none; }
-.tile.armed, .tile.busy {
+.tile.busy {
   background-color: var(--fill); background-image: linear-gradient(135deg, var(--fill), var(--accent-2)); color: var(--on);
 }
-.tile.armed { transform: scale(1.04); transition-timing-function: var(--spring); }
 .tile .ico, .tile .spin, .tile .check { position: relative; z-index: 1; }
 .tile .spin, .tile .check, .tile .ask, .tile .busytxt, .tile .donetxt { display: none; }
-.tile.armed .ask { display: block; font-size: 12px; font-weight: 500; line-height: 1; margin-bottom: 6px; }
-.tile.armed::after {
+.tile.undo .ask { display: block; font-size: 12px; font-weight: 600; line-height: 1; margin-bottom: 6px; color: var(--bad); }
+.tile.undo::after {
   content: ""; position: absolute; left: 18px; right: 18px; bottom: 8px; height: 3px; border-radius: 2px;
-  background: rgba(255,255,255,.7); transform-origin: left; animation: countdown 4s linear forwards;
+  background: var(--bad); transform-origin: left; animation: countdown 5s linear forwards;
 }
 .tile.busy .ico, .tile.busy .name { display: none; }
 .tile.busy .spin { display: block; animation: spin .75s linear infinite; }
