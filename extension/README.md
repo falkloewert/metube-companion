@@ -15,7 +15,7 @@ cd extension
 
 ## Install
 
-**Chromium (Chrome, Brave, Edge, ...):** unzip `metube-companion-chromium.zip` (the folder must contain a `manifest.json`), open the extensions page (`chrome://extensions`, `brave://extensions`), enable developer mode, "Load unpacked", pick the folder.
+**Chromium (Chrome, Brave, Edge, ...):** install it from the [Chrome Web Store](https://chromewebstore.google.com/detail/jbbofgfomolpmigffpdnmodnelcagelp). To test a build: unzip `metube-companion-chromium.zip` (the folder must contain a `manifest.json`), open the extensions page (`chrome://extensions`, `brave://extensions`), enable developer mode, "Load unpacked", pick the folder.
 
 **Firefox:** temporary, for testing: `about:debugging#/runtime/this-firefox`, "Load Temporary Add-on", pick `manifest.json` or the `.xpi`; it disappears on restart. For a permanent install Firefox requires a Mozilla signature: submit the `.xpi` as an unlisted add-on at [addons.mozilla.org/developers](https://addons.mozilla.org/developers/) and install the signed file via `about:addons`. Needs Firefox 140 (Firefox for Android 142).
 

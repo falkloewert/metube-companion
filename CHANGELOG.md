@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- The extension is in the [Chrome Web Store](https://chromewebstore.google.com/detail/jbbofgfomolpmigffpdnmodnelcagelp). The web UI, README and install guide link it instead of the developer-mode install.
+
 ## 0.5.0 - 2026-11-22
 
 - Web UI and extension: one tap on Video, Audio or Text sends right away. For 5 seconds the tile then shows "cancel?"; a second tap cancels the job, MeTube stops the download and keeps no file. Before, the first tap only selected and a second tap sent; that cost a tap every time to guard against a rare mistake. Enter in the web UI's link field sends as Video. A job that already finished in those seconds (a short transcript) stays and says so.

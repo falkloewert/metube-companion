@@ -58,9 +58,9 @@
     'Choose file': 'Datei wählen',
     'Remove': 'Entfernen',
     'Extension and help': 'Erweiterung und Hilfe',
-    'The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.':
-      'Die Erweiterung sendet den Link des offenen Tabs an diese Seite (mit den Cookies der Seite, wenn du es in ihren Einstellungen erlaubst). Chromium-Browser: Datei entpacken, die Erweiterungsseite öffnen, den Entwicklermodus einschalten, „Entpackte Erweiterung laden“. Firefox behält unsignierte Erweiterungen nur bis zum Neustart, siehe die <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">Installationsanleitung</a>.',
-    'Chromium extension': 'Chromium-Erweiterung',
+    'The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Chrome, Brave, Edge: install it from the Chrome Web Store. Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.':
+      'Die Erweiterung sendet den Link des offenen Tabs an diese Seite (mit den Cookies der Seite, wenn du es in ihren Einstellungen erlaubst). Chrome, Brave, Edge: aus dem Chrome Web Store installieren. Firefox behält unsignierte Erweiterungen nur bis zum Neustart, siehe die <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">Installationsanleitung</a>.',
+    'Chrome Web Store': 'Chrome Web Store',
     'Firefox extension': 'Firefox-Erweiterung',
     'Report a problem': 'Problem melden',
 
