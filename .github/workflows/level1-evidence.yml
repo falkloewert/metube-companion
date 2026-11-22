@@ -1,18 +1,22 @@
-# Level 1 Evidence PR Workflow (ported from the glass-factory kit)
+# managed by glass-factory kit v1.1.0 (d8ce937), rendered by install.sh from factory/evidence.config.sh: do not edit; change the config and run install.sh --update
+# Level 1 Evidence PR Workflow (rendered from the glass-factory kit template by install.sh)
 #
-# Runs factory/run-evidence.sh: offline sandbox (companion + mock MeTube), unit and smoke
-# checks, Playwright proof video, deterministic quality gate.
+# Runs factory/evidence/run-evidence.sh and publishes the proof on the pull request.
 #
 # Security & Reliability Architecture (2-Job Split):
 # - Job 1 (`evidence`): Executes PR code inside the isolated Level 0 Docker Compose sandbox with
 #   STRICTLY READ-ONLY permissions (`contents: read`, `persist-credentials: false`) so untrusted
 #   PR code, Dockerfiles, or npm scripts NEVER receive a repository write token.
 # - Job 2 (`publish-evidence`): Runs ONLY for same-repo PRs (and skips cancelled runs), NEVER checks
-#   out or executes PR code, downloads only the verified artifact bundle, publishes the directly
-#   playable `proof.mp4`, smooth inline `proof-preview.gif`, and full-resolution step `screenshots/*.png`
+#   out or executes PR code, downloads only the verified artifact bundle, publishes `proof.mp4`,
+#   the inline `proof-preview.gif` and the full-resolution step `screenshots/*.png`
 #   to `pr-<num>/` on the dedicated `factory-evidence-previews` branch (overwriting prior runs of the
 #   same PR to prevent unbounded bloat, with shallow-safe conflict retry), and posts a visual-first
 #   PR Evidence comment with an independent GitHub API scope cross-check.
+# - Video links: in a PUBLIC repository the MP4 is linked through jsDelivr, pinned to the commit
+#   SHA of the pushed preview branch (served as video/mp4 with range requests, so it also plays on
+#   phones). In a private repository jsDelivr cannot read it: the link stays a raw GitHub download
+#   and is labelled as such; the GIF at the top of the comment carries the flow on phones.
 #
 # Security defaults:
 # - Uses `pull_request` (NOT `pull_request_target`) so untrusted fork code never accesses elevated tokens.
@@ -20,6 +24,10 @@
 # - Never auto-merges. Humans stay in full control.
 # - Tip: If your org forbids any bot branch writes, set `ENABLE_INLINE_PR_PREVIEWS: "false"` and
 #   change Job 2's `contents: write` to `contents: read`.
+#
+# The two scope patterns in the "Independent GitHub API scope cross-check" below come from
+# SCOPE_VERIFICATION_RE / SCOPE_SENSITIVE_RE in factory/evidence.config.sh. Change them there
+# and run install.sh --update; do not edit them here.
 
 name: Level 1 Evidence Check
 
@@ -60,7 +68,7 @@ jobs:
 
       - name: Run Level 0 + Level 1 Sandbox, Evidence Suite & Quality Gate
         run: |
-          CHANGED_FILES="$(cat /tmp/pr-changed-files.txt)" ./factory/run-evidence.sh
+          CHANGED_FILES="$(cat /tmp/pr-changed-files.txt)" ./factory/evidence/run-evidence.sh
 
       - name: Upload Evidence Bundle (H.264 MP4, Smooth GIF, Full-Res Screenshots, Report)
         if: always()
@@ -94,6 +102,7 @@ jobs:
         if: env.ENABLE_INLINE_PR_PREVIEWS == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO_PRIVATE: ${{ github.event.repository.private }}
         run: |
           set -euo pipefail
           MP4="./downloaded-artifacts/videos/proof.mp4"
@@ -182,8 +191,19 @@ jobs:
           fi
 
           BASE_URL="${{ github.server_url }}/${{ github.repository }}/blob/${PREVIEW_BRANCH}/${REL_DIR}"
+          # Commit of the preview branch that holds the files: jsDelivr caches branch URLs for 12 h,
+          # a SHA URL is immutable and always shows this run's video.
+          PREVIEW_SHA="$(git -C "$WORK" rev-parse HEAD)"
+          # jsDelivr only serves public GitHub repositories (and GitHub files up to 20 MB).
+          MP4_JSDELIVR=false
+          if [[ "$HAS_MP4" == "true" && "$REPO_PRIVATE" == "false" && "$(stat -c %s "$MP4")" -le 20971520 ]]; then
+            MP4_JSDELIVR=true
+          fi
           echo "published=true" >> "$GITHUB_OUTPUT"
           echo "base_url=${BASE_URL}" >> "$GITHUB_OUTPUT"
+          echo "rel_dir=${REL_DIR}" >> "$GITHUB_OUTPUT"
+          echo "preview_sha=${PREVIEW_SHA}" >> "$GITHUB_OUTPUT"
+          echo "mp4_jsdelivr=${MP4_JSDELIVR}" >> "$GITHUB_OUTPUT"
           echo "cache_bust=${CACHE_BUST}" >> "$GITHUB_OUTPUT"
           echo "has_mp4=${HAS_MP4}" >> "$GITHUB_OUTPUT"
           echo "has_gif=${HAS_GIF}" >> "$GITHUB_OUTPUT"
@@ -194,6 +214,9 @@ jobs:
         env:
           PREVIEWS_PUBLISHED: ${{ steps.previews.outputs.published }}
           BASE_URL: ${{ steps.previews.outputs.base_url }}
+          REL_DIR: ${{ steps.previews.outputs.rel_dir }}
+          PREVIEW_SHA: ${{ steps.previews.outputs.preview_sha }}
+          MP4_JSDELIVR: ${{ steps.previews.outputs.mp4_jsdelivr }}
           CACHE_BUST: ${{ steps.previews.outputs.cache_bust }}
           HAS_MP4: ${{ steps.previews.outputs.has_mp4 }}
           HAS_GIF: ${{ steps.previews.outputs.has_gif }}
@@ -216,8 +239,15 @@ jobs:
             const baseUrl = process.env.BASE_URL || '';
             const bust = process.env.CACHE_BUST ? `&v=${process.env.CACHE_BUST}` : '';
             if (process.env.PREVIEWS_PUBLISHED === 'true' && baseUrl) {
-              if (process.env.HAS_MP4 === 'true') {
-                reportBody = reportBody.replaceAll('(videos/proof.mp4)', `(${baseUrl}/proof.mp4?raw=true${bust})`);
+              if (process.env.MP4_JSDELIVR === 'true') {
+                // Public repo: jsDelivr serves video/mp4 with range requests (plays on phones), pinned to the commit SHA.
+                const { owner, repo } = context.repo;
+                const cdnUrl = `https://cdn.jsdelivr.net/gh/${owner}/${repo}@${process.env.PREVIEW_SHA}/${process.env.REL_DIR}/proof.mp4`;
+                reportBody = reportBody.replaceAll('(videos/proof.mp4)', `(${cdnUrl})`);
+              } else if (process.env.HAS_MP4 === 'true') {
+                // Private repo (or MP4 over 20 MB): raw GitHub download, application/octet-stream, no phone playback.
+                reportBody = reportBody
+                  .replace(/\[[^\]]*\]\(videos\/proof\.mp4\)/, `[Download MP4 (phones: use the GIF above)](${baseUrl}/proof.mp4?raw=true${bust})`);
               } else {
                 reportBody = reportBody.replaceAll('(videos/proof.mp4)', `(${runUrl})`);
               }
@@ -277,9 +307,9 @@ jobs:
               per_page: 100,
             });
             const changedPaths = [...new Set(prFiles.flatMap((f) => [f.filename, f.previous_filename].filter(Boolean)))];
-            // Keep in sync with factory/evidence/scripts/scope-classifier.mjs (this job never checks out PR code).
-            const verificationRe = /(^|[\/._-])(tests?|__tests__|specs?|mocks?|evidence)([\/._-]|$)|docker-compose|run-evidence\.sh|smoke\.sh/i;
-            const sensitiveRe = /(^|\/)Dockerfile|^nginx\/|^docker\/|(^|\/)(docker-)?compose[^\/]*\.ya?ml$|^\.github\/|^factory\/|^tests\/|^extension\/manifest[^\/]*\.json$|(^|\/)\.env|secret/i;
+            // Rendered from factory/evidence.config.sh by install.sh (this job never checks out PR code).
+            const verificationRe = new RegExp("(^|[\\/._-])(tests?|__tests__|specs?|mocks?|evidence)([\\/._-]|$)|docker-compose|run-evidence\\.sh|smoke\\.sh", 'i');
+            const sensitiveRe = new RegExp("(^|\\/)Dockerfile|^nginx\\/|^docker\\/|(^|\\/)(docker-)?compose[^\\/]*\\.ya?ml$|^\\.github\\/|^factory\\/|^tests\\/|^extension\\/manifest[^\\/]*\\.json$|(^|\\/)\\.env|secret", 'i');
 
             const touchedVerification = changedPaths.filter((p) => verificationRe.test(p)).sort();
             const touchedSensitive = changedPaths.filter((p) => sensitiveRe.test(p)).sort();

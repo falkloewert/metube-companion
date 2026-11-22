@@ -1,18 +1,27 @@
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 /**
  * Deterministic classifier for PR/workspace changed files.
  * Shared between generate-report.mjs and quality-gate.mjs so rules never drift.
- * The same two patterns are inlined in .github/workflows/level1-evidence.yml
- * (the publish job never checks out PR code): change both together.
+ *
+ * The two patterns come from factory/evidence.config.sh (SCOPE_VERIFICATION_RE, SCOPE_SENSITIVE_RE),
+ * passed in by run-evidence.sh. install.sh renders the same two strings into the CI workflow
+ * (the publish job never checks out PR code), so there is one source of truth.
+ * Patterns are regex sources; the case-insensitive flag is fixed.
  */
 
-// Tests, mocks, evidence kit, sandbox compose file and the scripts that run them.
-export const VERIFICATION_RE =
-  /(^|[\/._-])(tests?|__tests__|specs?|mocks?|evidence)([\/._-]|$)|docker-compose|run-evidence\.sh|smoke\.sh/i;
+function requiredRegex(name) {
+  const source = process.env[name];
+  if (!source) {
+    throw new Error(`${name} is not set; run through factory/evidence/run-evidence.sh (it exports factory/evidence.config.sh)`);
+  }
+  return new RegExp(source, 'i');
+}
 
-// Paths where a green UI proof says nothing about safety: image and web server
-// setup, compose files, CI, the whole factory sandbox, tests, extension manifests.
-export const SENSITIVE_RE =
-  /(^|\/)Dockerfile|^nginx\/|^docker\/|(^|\/)(docker-)?compose[^\/]*\.ya?ml$|^\.github\/|^factory\/|^tests\/|^extension\/manifest[^\/]*\.json$|(^|\/)\.env|secret/i;
+// Tests, mocks, evidence kit, sandbox compose file and the scripts that run them.
+export const VERIFICATION_RE = requiredRegex('SCOPE_VERIFICATION_RE');
+
+// Paths where a green UI proof says nothing about safety (auth, migrations, CI, images, secrets, ...).
+export const SENSITIVE_RE = requiredRegex('SCOPE_SENSITIVE_RE');
 
 export function parseChangedFiles(rawText) {
   return String(rawText || '')

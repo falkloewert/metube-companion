@@ -6,8 +6,8 @@
 #   factory/smoke.sh
 #   docker compose -f docker-compose.factory.yml down -v
 #
-# Evidence run (unit checks, smoke, Playwright proof video, quality gate):
-#   factory/run-evidence.sh
+# Evidence run (unit checks, smoke, Playwright proof video, quality gate; config in factory/evidence.config.sh):
+#   factory/evidence/run-evidence.sh
 #
 # Parallel runs: set COMPOSE_PROJECT_NAME and FACTORY_WEB_PORT / FACTORY_MOCK_PORT.
 
@@ -61,7 +61,8 @@ services:
       retries: 15
     networks: [sandbox]
 
-  # Playwright browser tests (profile "evidence", started by factory/run-evidence.sh).
+  # Playwright browser tests (profile "evidence", started by factory/evidence/run-evidence.sh,
+  # which passes URLs, resets and fixtures from factory/evidence.config.sh as environment).
   # Runs on the sandbox network, so the browser reaches the services by name:
   # http://web:8080 (companion) and http://metube:8081 (mock inspector).
   # Keep the service name "web": Chromium forces HTTPS on .app/.dev hostnames.
@@ -75,12 +76,6 @@ services:
         condition: service_healthy
       metube:
         condition: service_healthy
-    environment:
-      APP_URL: http://web:8080
-      MOCK_URL: http://metube:8081
-      EVIDENCE_OUT: /artifacts
-      THUMBNAIL_FILE: /fixtures/thumbnail.jpg
-      HOME: /tmp
     volumes:
       - ${ARTIFACTS_DIR:-./factory/artifacts}:/artifacts
       - ./factory/mocks/metube/fixtures:/fixtures:ro

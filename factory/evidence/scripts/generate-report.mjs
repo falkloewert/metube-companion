@@ -1,3 +1,4 @@
+// managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { execFile } from 'node:child_process';
@@ -7,6 +8,12 @@ import { classifyChangedFiles, parseChangedFiles } from './scope-classifier.mjs'
 const execFileAsync = promisify(execFile);
 
 const OUT_DIR = process.env.EVIDENCE_OUT || path.resolve('./artifacts');
+// Report wording from factory/evidence.config.sh (see README, "Config reference").
+const UNIT_LABEL = process.env.UNIT_LABEL || 'Unit Tests';
+// Set by run-evidence.sh when UNIT_RUNNER=none and there is no SMOKE_CMD.
+const UNIT_DISABLED = process.env.UNIT_DISABLED === 'true';
+const ENVIRONMENT_DESC = process.env.ENVIRONMENT_DESC || '';
+const SCOPE_SENSITIVE_LABEL = process.env.SCOPE_SENSITIVE_LABEL || 'Sensitive paths (auth, migrations, CI, Docker, secrets)';
 const RESULTS_FILE = path.join(OUT_DIR, 'results.json');
 const PROOF_STEPS_FILE = path.join(OUT_DIR, 'proof-steps.json');
 const UNIT_TAP_FILE = path.join(OUT_DIR, 'unit-tests.tap');
@@ -427,7 +434,9 @@ async function main() {
       : '';
   const unitSummaryLine = unit
     ? `**${unit.ok ? 'PASS' : 'FAIL'}** – **${unit.passed}/${unit.total} passed** (${unit.failed} failed${unitSkippedNote}, exit ${unit.exitCode}) in **${(unit.durationMs / 1000).toFixed(2)}s**`
-    : '*(not captured in standalone evidence run)*';
+    : UNIT_DISABLED
+      ? '*(disabled in evidence.config.sh: UNIT_RUNNER=none and no SMOKE_CMD)*'
+      : '*(not captured in standalone evidence run)*';
 
   const e2eSkippedNote = e2eSkipped > 0 ? `, ${e2eSkipped} skipped` : '';
   const e2eErrorNote = topLevelErrors.length > 0 ? `, ${topLevelErrors.length} suite errors` : '';
@@ -436,7 +445,11 @@ async function main() {
     : `**${e2eOk ? 'PASS' : 'FAIL'}** – **${e2ePassed}/${e2eTotal} passed** (${e2eFailed} failed${e2eSkippedNote}${e2eErrorNote}) in **${(e2eTotalMs / 1000).toFixed(2)}s**`;
 
   // Reviewer-first Visual Proof section (direct video link + smooth 12fps GIF + full-resolution step screenshots)
+  // GIF first: phones (T3 Code, mobile browsers) cannot play the MP4 link, so the preview must lead.
   const visualProofLines = ['## Visual Proof (1 Ticket = 1 Step-Paced Flow)'];
+  if (previewGifMedia) {
+    visualProofLines.push('', '![Level 1 Proof Preview](preview/proof-preview.gif)');
+  }
   if (proofMedia) {
     visualProofLines.push(
       '',
@@ -445,12 +458,9 @@ async function main() {
   } else {
     visualProofLines.push('', '- **Full Proof Video:** *(none captured)*');
   }
-
   if (previewGifMedia) {
     visualProofLines.push(
-      `- **Smooth Inline Preview GIF:** \`preview/proof-preview.gif\` (${previewGifMedia.width}x${previewGifMedia.height}, ${previewGifMedia.fps} fps, ${formatBytes(previewGifMedia.sizeBytes)})`,
-      '',
-      '![Level 1 Proof Preview](preview/proof-preview.gif)'
+      `- **Smooth Inline Preview GIF:** \`preview/proof-preview.gif\` (${previewGifMedia.width}x${previewGifMedia.height}, ${previewGifMedia.fps} fps, ${formatBytes(previewGifMedia.sizeBytes)})`
     );
   }
 
@@ -514,13 +524,13 @@ async function main() {
       ...scope.sensitive.map((p) => `  - \`${p}\``)
     );
   } else {
-    scopeLines.push('- **Sensitive paths (Docker, nginx, CI, factory sandbox, tests, manifests):** None detected.');
+    scopeLines.push(`- **${SCOPE_SENSITIVE_LABEL}:** None detected.`);
   }
 
   // Detailed Test Tables inside collapsible <details> so the PR comment stays crisp and scannable
   const unitTableLines = unit
     ? [
-        '### Unit & Smoke Checks',
+        `### ${UNIT_LABEL}`,
         '',
         ...(unit.cases.length
           ? [
@@ -528,7 +538,7 @@ async function main() {
               '|---|---|',
               ...unit.cases.map((c) => `| ${c.status} | ${escapeCell(c.title)} |`),
             ]
-          : [`- Check runner exited with code \`${unit.exitCode}\` and produced no test cases.`]),
+          : [`- The ${UNIT_LABEL} runner exited with code \`${unit.exitCode}\` and produced no test cases.`]),
         '',
       ]
     : [];
@@ -542,7 +552,7 @@ async function main() {
         .join('\n')
     : '| FAIL | – | *(no E2E scenarios executed)* | 0.00s |';
 
-  const testDetailsSummary = `Automated Test Details – Checks ${unit ? `${unit.passed}/${unit.total}` : 'n/a'}, E2E ${e2ePassed}/${e2eTotal}`;
+  const testDetailsSummary = `Automated Test Details – ${UNIT_LABEL} ${unit ? `${unit.passed}/${unit.total}` : 'n/a'}, E2E ${e2ePassed}/${e2eTotal}`;
   const testDetailsSection = [
     `<details${verdict === 'FAIL' ? ' open' : ''}>`,
     `<summary><strong>${testDetailsSummary}</strong></summary>`,
@@ -559,9 +569,9 @@ async function main() {
 
   const markdown = `# Level 1 Evidence Report – ${verdict}
 
-- **Unit & smoke checks:** ${unitSummaryLine}
+- **${UNIT_LABEL}:** ${unitSummaryLine}
 - **E2E Tests (Playwright):** ${e2eSummaryLine}
-- **Environment:** Isolated Local Docker Compose Sandbox (companion \`web\` + mock MeTube \`metube\`, no database, no internet, **0 prod secrets**)
+- **Environment:** Isolated Local Docker Compose Sandbox (${ENVIRONMENT_DESC ? `${ENVIRONMENT_DESC}, ` : ''}**0 prod secrets**)
 - **Generated:** ${new Date().toISOString()}
 
 ${failureDetailsSection}${visualProofLines.join('\n')}
