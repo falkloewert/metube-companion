@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "MeTube Companion",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Sends the current link, optionally with that site's cookies, to your own MeTube instance.",
   "permissions": [
     "storage",

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.4.1 - 2026-11-22
+
+- Extension: installed from the store without the server part? The settings page says up front that MeTube Companion has to run on your computer or server and links the setup guide; the popup shows "No MeTube Companion yet? How to set it up" when it cannot reach the instance.
+
 ## 0.4.0 - 2026-11-22
 
 Note: update the image and the extension together. **If you open the companion by a domain name** (reverse proxy, `nas.example.com`, `*.ts.net`), add it to the new `COMPANION_HOSTS`, otherwise it answers "421". IP addresses, `localhost`, names without a dot and `.local` keep working. `compose.desktop.yml` now takes `COMPANION_TOKEN` and `COMPANION_HOSTS` from `.env`: if you set the token in the compose file before, move it to `.env` before replacing the file, otherwise the instance runs without a token.

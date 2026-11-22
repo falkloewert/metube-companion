@@ -73,7 +73,7 @@ document.getElementById('save').addEventListener('click', async () => {
       credentials: 'include', headers: tok ? { 'X-Companion-Token': tok } : {}
     });
   } catch (_) {
-    say('Saved, but ' + origin + ' is not reachable. Check the address and that you are on the same network or VPN.', true);
+    say('Saved, but ' + origin + ' is not reachable. Check the address and that you are on the same network or VPN. Not set up yet? See the setup guide above.', true);
     return;
   }
   try {

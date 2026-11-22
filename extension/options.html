@@ -21,6 +21,7 @@
     #status { min-height: 20px; color: var(--text); }
     #status.ok { color: var(--ok-ink); }
     #status.bad { color: var(--bad); }
+    .card p a { color: var(--link-ink); }
     .check { display: flex; gap: 10px; align-items: flex-start; margin: 18px 0 0; font-size: 14px; color: var(--text); cursor: pointer; }
     .check input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--fill); }
     .check small { display: block; color: var(--muted); font-size: 13px; }
@@ -29,7 +30,7 @@
 <body>
   <h1 style="font-size:20px">MeTube Companion</h1>
   <div class="card">
-    <p style="margin-top:0">Welcome! Enter the address you open MeTube Companion at in the browser. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
+    <p style="margin-top:0">Welcome! This extension sends links to MeTube Companion, which runs on your computer or server (free, with Docker). Not set up yet? Follow the <a href="https://github.com/falkloewert/metube-companion#quick-start" target="_blank" rel="noopener">setup guide</a> first. Then enter the address you open MeTube Companion at in the browser. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
     <label for="base">Address of your MeTube Companion</label>
     <input id="base" type="url" placeholder="http://localhost:8081" spellcheck="false">
     <label for="token">Access token (only if your instance is protected with one)</label>

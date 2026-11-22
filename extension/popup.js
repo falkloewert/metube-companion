@@ -20,9 +20,13 @@ $('copy').insertAdjacentHTML('afterbegin', ICON.copy + CHECK('tick'));
 $('md').insertAdjacentHTML('afterbegin', ICON.md + CHECK('tick'));
 $('home').insertAdjacentHTML('afterbegin', ICON.open);
 
+// The extension is useless without the server part; someone who installed
+// it from the store alone gets the setup guide with "Cannot reach".
+const setup = $('setup');
 function setStatus(text, bad) {
   status.textContent = text;
   status.classList.toggle('err', !!bad);
+  setup.hidden = !text.startsWith('Cannot reach ');
 }
 
 browser.tabs.query({ active: true, currentWindow: true }).then(async ([tab]) => {
@@ -235,7 +239,7 @@ $('home').addEventListener('click', async (e) => {
 $('ver').textContent = 'v' + browser.runtime.getManifest().version;
 
 // Tell right away when the instance is not reachable (wrong address,
-// not on the home network or VPN, missing permission).
+// not on the home network or VPN, not set up at all).
 unreachable().then((msg) => { if (msg) setStatus(msg, true); });
 
 // After opening, keep showing the last video (also if the context menu

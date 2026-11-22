@@ -47,6 +47,8 @@
     #jobmeta { font-size: 12px; color: var(--muted); margin-top: 2px; }
     #report { font-size: 12px; color: var(--link-ink); }
     #report[hidden] { display: none; }
+    #setup { display: block; font-size: 12px; color: var(--link-ink); margin: 6px 4px 0; }
+    #setup[hidden] { display: none; }
     #job.error #jobmeta { color: var(--bad); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
     .formats { margin-top: 10px; gap: 5px; }
     .fmt { height: 58px; border-radius: 12px; font-size: 10px; letter-spacing: -.2px; padding: 0 2px; }
@@ -74,6 +76,7 @@
     </div>
 
     <p id="status" role="status" aria-live="polite"></p>
+    <a id="setup" href="https://github.com/falkloewert/metube-companion#quick-start" target="_blank" rel="noopener" hidden>No MeTube Companion yet? How to set it up</a>
 
     <div id="job" hidden>
       <div class="jobhead">
