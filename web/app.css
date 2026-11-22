@@ -182,6 +182,8 @@ a.title:hover { text-decoration: underline; }
 .login { padding: 16px; }
 .login[hidden] { display: none; }
 .login p { margin: 0 0 10px; font-size: 14px; }
+.login .btn { flex: none; }
+.login .bad { color: var(--bad); }
 .login input { flex: 1; min-width: 0; height: 44px; padding: 0 16px; border: 0; border-radius: 999px; background: var(--soft); color: inherit; font: inherit; }
 
 /* Trash */

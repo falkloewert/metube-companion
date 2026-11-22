@@ -218,7 +218,7 @@ function friendlyError(msg) {
   if (/429|Too Many Requests/i.test(m)) return t('YouTube is blocking requests right now (too many). Try again later.');
   if (/cookies are no longer valid/i.test(m)) return t('The stored YouTube cookies have expired. Send once via the extension (it sends fresh ones) or remove them under "Cookies".');
   if (/HTTP Error 403|Forbidden/i.test(m)) return t('YouTube refused the download (403). Usually temporary: tap retry.');
-  if (/Sign in to confirm/i.test(m)) return t('YouTube wants a sign-in. Send cookies via the extension and try again.');
+  if (/Sign in to confirm/i.test(m)) return t('YouTube wants a sign-in: send your cookies (extension setting "Send my cookies" or Cookies in the web UI), then retry.');
   if (/private|unavailable/i.test(m)) return t('Video is private or unavailable.');
   return m.replace(/^ERROR:\s*/i, '') || t('Error');
 }
@@ -529,7 +529,7 @@ async function handleFormatClick(c, { item, files, onToggleText, onSave, onCance
   if (state === 'busy') {
     if (!c.classList.contains('cancel')) {
       c.classList.add('cancel');
-      setVerb(c, t('tap to cancel'));
+      setVerb(c, t('cancel?'));
       setTimeout(() => c.classList.remove('cancel'), 4000);
       return;
     }

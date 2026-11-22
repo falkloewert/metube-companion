@@ -5,6 +5,7 @@ ENV METUBE_URL=http://metube:8081 \
     RETENTION_DAYS=0 \
     TRASH_DAYS=7 \
     COMPANION_TOKEN= \
+    COMPANION_HOSTS= \
     YOUTUBE_WATCH_URL=https://www.youtube.com/watch?v= \
     NGINX_ENTRYPOINT_LOCAL_RESOLVERS=1 \
     NGINX_ENTRYPOINT_QUIET_LOGS=1
@@ -13,6 +14,7 @@ COPY docker/nginx.conf /etc/nginx/nginx.conf
 COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY docker/05-check-token.sh /docker-entrypoint.d/05-check-token.sh
 COPY docker/16-metube-upstream.envsh /docker-entrypoint.d/16-metube-upstream.envsh
+COPY docker/17-companion-hosts.envsh /docker-entrypoint.d/17-companion-hosts.envsh
 COPY docker/40-cleanup.sh /docker-entrypoint.d/40-cleanup.sh
 COPY web/ /usr/share/nginx/html/
 

@@ -44,6 +44,8 @@ function askToken() {
   const card = $('login');
   if (!card.hidden) return;
   card.hidden = false;
+  // A token cookie that still gets 401 is a wrong token.
+  $('login-wrong').hidden = !/(^|;\s*)companion_token=/.test(document.cookie);
   $('token').focus();
 }
 

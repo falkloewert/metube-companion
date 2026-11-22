@@ -71,7 +71,8 @@ async function send(url, kind) {
   const base = await getBase();
   if ((url + '/').startsWith(base + '/')) throw new Error('That is the MeTube page itself, not the video.');
 
-  const cookies = await collectCookies(url);
+  const { sendCookies } = await browser.storage.local.get('sendCookies');
+  const cookies = sendCookies && cookieSafe(base) ? await collectCookies(url) : [];
   if (cookies.length) {
     const form = new FormData();
     form.append('cookies', new Blob([netscape(cookies)], { type: 'text/plain' }), 'cookies.txt');

@@ -56,6 +56,9 @@ services:
       # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -). Without it,
       # everyone who can reach the companion can use it.
       # COMPANION_TOKEN: "change-me-to-a-long-random-string"
+      # Names (besides IP addresses, localhost, "nas"-style names and .local)
+      # this instance is opened by, e.g. behind a reverse proxy (INSTALL.md 5).
+      # COMPANION_HOSTS: "metube.example.com"
     ports:
       - "8082:8080"
     volumes:

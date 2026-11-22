@@ -27,11 +27,10 @@ const prefSelects = Object.keys(PREF_OPTIONS).map((k) => {
 
 const cookies = document.getElementById('cookies');
 
-browser.storage.local.get(['base', 'token', 'prefs']).then(async ({ base: saved, token: savedToken, prefs }) => {
+browser.storage.local.get(['base', 'token', 'prefs', 'sendCookies']).then(({ base: saved, token: savedToken, prefs, sendCookies }) => {
   base.value = saved || DEFAULT_BASE;
   token.value = savedToken || '';
-  // First start: suggested, the browser prompt asks anyway.
-  cookies.checked = !saved || await browser.permissions.contains(cookiePermissions());
+  cookies.checked = !!sendCookies;
   const p = normalizePrefs(prefs);
   prefSelects.forEach(([k, sel]) => { sel.value = p[k]; });
 });
@@ -45,6 +44,10 @@ document.getElementById('save').addEventListener('click', async () => {
     origin = u.origin;
   } catch (_) {
     say('Please enter a full address starting with http:// or https://.', true);
+    return;
+  }
+  if (cookies.checked && !cookieSafe(origin)) {
+    say('Cookies are only sent to an https:// address or to this computer. Use HTTPS for your instance or untick the cookies.', true);
     return;
   }
   // One prompt for the address and, if ticked, the cookies. Must run directly
@@ -64,7 +67,7 @@ document.getElementById('save').addEventListener('click', async () => {
   }
   if (!cookies.checked) await browser.permissions.remove(cookiePermissions()).catch(() => {});
   const tok = token.value.trim();
-  await browser.storage.local.set({ base: value, token: tok });
+  await browser.storage.local.set({ base: value, token: tok, sendCookies: cookies.checked });
   say('Saved. Checking the connection …');
   let res;
   try {
@@ -77,6 +80,7 @@ document.getElementById('save').addEventListener('click', async () => {
   }
   try {
     if (res.status === 401) throw new Error(tok ? 'the access token is wrong.' : 'this instance is protected, enter its access token.');
+    if (res.status === 421) throw new Error('the instance does not answer to this name. Add it to COMPANION_HOSTS (INSTALL.md) or use its IP address.');
     if (res.status === 404) throw new Error('this looks like MeTube without the companion. The extension needs MeTube Companion in front of MeTube.');
     if (!res.ok) throw new Error('the instance answered with HTTP ' + res.status + '.');
     await res.json();

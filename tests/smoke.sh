@@ -61,6 +61,9 @@ check 403 "folders cannot be deleted" -X DELETE "$B/files/sub/"
 check 404 "hidden paths blocked" "$B/files/.tmp/"
 check 404 "hidden paths blocked (state folder)" "$B/files/.metube/state"
 curl -s "$B/yt/notanid" | grep -q "MeTube Companion" && ok "/yt/ only proxies video IDs" || bad "/yt/ proxied a non-ID"
+check 421 "unknown host name refused (DNS rebinding)" -H 'Host: rebind.example.com' "$B/api/history"
+check 200 "host name without a dot allowed" -H 'Host: nas' "$B/healthz"
+curl -sI "$B/" | grep -qi '^x-frame-options: DENY' && ok "web UI cannot be framed" || bad "web UI can be framed"
 curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/ext/yt/jNQXAC9IVRw" \
   | grep -qi '^access-control-allow-origin: moz-extension://x' && ok "extension language lookup (/ext/yt/, CORS)" || bad "extension language lookup (/ext/yt/)"
 check 404 "MeTube live updates blocked on /ext/" "$B/ext/socket.io/?EIO=4&transport=polling"
@@ -230,7 +233,7 @@ check 401 "wrong token" -H 'X-Companion-Token: wrong-token-123456789' "$B/api/hi
 curl -s "$B/config.js" | grep -q 'authRequired: 1' && ok "config.js reports the token" || bad "config.js: $(curl -s "$B/config.js")"
 
 echo "unsafe tokens are rejected"
-for t in 'short"x' '~aaaaaaaaaaaaaaaaaa'; do
+for t in 'short"x' '~aaaaaaaaaaaaaaaaaa' "$(printf 'aaaaaaaaaaaaaaaaaa\n; }')"; do
   COMPANION_TOKEN="$t" up companion
   sleep 3
   docker compose -p "$P" -f "$WORK/compose.yml" logs --since 10s companion 2>&1 | grep -q "COMPANION_TOKEN must be" \

@@ -8,7 +8,7 @@ Installing for a user? Read [INSTALL.md](INSTALL.md) instead. This file is for c
 - `web/i18n/`: one strings file per UI language (`de.js`), loaded before `shared.js`, active only when the browser's first language matches.
 - `extension/`: Chromium (MV3, `manifest.chromium.json`) and Firefox (MV2, `manifest.json`) from one source. `build.sh` copies `../web/shared.*` into the packages.
 - `nginx/default.conf.template`: rendered at container start (envsubst): `/api/` (UI), `/ext/` (extension, CORS + MeTube's Sec-Fetch-Site guard), `/yt/<id>` (watch page for language detection), `/files/` (listing, DELETE of files), `/config.js`, `/healthz`.
-- `docker/`, `Dockerfile`: image runs nginx as any user; `40-cleanup.sh` does `RETENTION_DAYS`.
+- `docker/`, `Dockerfile`: image runs nginx as any user; `17-companion-hosts.envsh` turns `COMPANION_HOSTS` into the host allowlist (DNS rebinding guard in the nginx template); `40-cleanup.sh` does `RETENTION_DAYS`.
 - `compose.desktop.yml`, `compose.server.yml`: the two supported install paths.
 - `docs/demo/`: `record.sh` rebuilds `docs/demo.mp4` end to end, see `storyboard.md` (own stack, real downloads; the extension part is the real X display of a headed Chromium under xvfb, the web part is Playwright; synthesized sounds, CC0 music from `CREDITS.md`). Re-run it after UI or extension changes that show in the video.
 

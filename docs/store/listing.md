@@ -13,7 +13,7 @@ Copy from here when submitting (#10). Package: the release assets `metube-compan
 
 **Description:**
 
-MeTube Companion sends the page you are on to your own MeTube server (a self-hosted web UI for yt-dlp). It needs the free MeTube Companion container next to MeTube; it does not download anything by itself and talks to no other server (the language of a transcript is also looked up through your server).
+MeTube Companion sends the page you are on to your own MeTube server (a self-hosted web UI for yt-dlp). It needs the free MeTube Companion container next to MeTube; it does not download anything by itself. It talks only to your server (the language of a transcript is looked up there too) and loads video thumbnails for the popup from YouTube's image server, i.ytimg.com.
 
 - Video, Audio or Text: tap a tile once to pick, again to send.
 - Transcripts as plain text, ready to copy or save as Markdown; the spoken language is detected for YouTube.

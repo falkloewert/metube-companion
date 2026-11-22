@@ -29,20 +29,20 @@
 <body>
   <h1 style="font-size:20px">MeTube Companion</h1>
   <div class="card">
-    <p style="margin-top:0">Welcome! Enter the address of your MeTube Companion. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
+    <p style="margin-top:0">Welcome! Enter the address you open MeTube Companion at in the browser. Using the desktop setup on this computer? Keep <code>http://localhost:8081</code> and press Save.</p>
     <label for="base">Address of your MeTube Companion</label>
     <input id="base" type="url" placeholder="http://localhost:8081" spellcheck="false">
     <label for="token">Access token (only if your instance is protected with one)</label>
     <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="leave empty if not protected">
     <label class="check"><input id="cookies" type="checkbox">
       <span>Send my cookies with YouTube, Instagram and TikTok links
-        <small>Needed for videos you can only see signed in, and when YouTube asks "Sign in to confirm you're not a bot". Only the cookies of the link's site, never your Google account. They are stored on your MeTube server and used for all its downloads.</small></span></label>
+        <small>Needed for videos you can only see signed in, and when YouTube asks "Sign in to confirm you're not a bot". Only the cookies of the link's site, never your Google account, and only to an https:// address or this computer. They are stored on your MeTube server and used for all its downloads; remove them there under Cookies.</small></span></label>
     <button id="save">Save</button>
+    <p id="status" role="status" aria-live="polite"></p>
     <label for="videoQuality">Video quality</label>
     <select id="videoQuality"></select>
     <label for="audioFormat">Audio format</label>
     <select id="audioFormat"></select>
-    <p id="status" role="status" aria-live="polite"></p>
   </div>
   <script src="compat.js"></script>
   <script src="shared.js"></script>

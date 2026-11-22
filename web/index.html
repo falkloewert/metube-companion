@@ -21,6 +21,7 @@
 
     <form class="card login" id="login" hidden>
       <p data-i18n><strong>This instance is protected.</strong> Enter the access token (COMPANION_TOKEN) once; this browser remembers it.</p>
+      <p id="login-wrong" class="bad" hidden data-i18n>That token is wrong. Enter it again.</p>
       <div class="row">
         <label class="sr-only" for="token" data-i18n>Access token</label>
         <input id="token" type="password" autocomplete="current-password" placeholder="Access token">
@@ -114,7 +115,7 @@
 
     <details class="card more">
       <summary data-i18n>Extension and help</summary>
-      <p class="explain" data-i18n>The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.</p>
+      <p class="explain" data-i18n>The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.</p>
       <div class="row">
         <a class="btn" data-i18n href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-chromium.zip">Chromium extension</a>
         <a class="btn" data-i18n href="https://github.com/falkloewert/metube-companion/releases/latest/download/metube-companion-firefox.xpi">Firefox extension</a>

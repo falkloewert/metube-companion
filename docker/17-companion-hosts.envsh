@@ -1,0 +1,18 @@
+#!/bin/sh
+# COMPANION_HOSTS (names separated by commas or spaces, ".example.com" for a
+# domain and its subdomains, "*" for any) -> map entries for $host_ok in the
+# nginx template, the guard against DNS rebinding.
+map=""
+def=0
+set -f  # "*" is a value here, not a file pattern
+for h in $(printf '%s' "${COMPANION_HOSTS:-}" | tr ',' ' '); do
+  if [ "$h" = '*' ]; then def=1; continue; fi
+  # Goes into the nginx config verbatim: host name characters only.
+  if ! printf '%s' "$h" | grep -Eqx '\.?[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*'; then
+    echo "COMPANION_HOSTS: '$h' is not a host name (use names like nas.example.com or .example.com)" >&2
+    exit 1
+  fi
+  map="$map $h 1;"
+done
+set +f
+export COMPANION_HOSTS_MAP="$map" COMPANION_HOSTS_DEFAULT="$def"

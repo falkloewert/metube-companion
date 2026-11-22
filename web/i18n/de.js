@@ -56,8 +56,8 @@
     'Choose file': 'Datei wählen',
     'Remove': 'Entfernen',
     'Extension and help': 'Erweiterung und Hilfe',
-    'The extension sends the link of the open tab, including cookies, to this page. Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.':
-      'Die Erweiterung sendet den Link des offenen Tabs samt Cookies an diese Seite. Chromium-Browser: Datei entpacken, die Erweiterungsseite öffnen, den Entwicklermodus einschalten, „Entpackte Erweiterung laden“. Firefox behält unsignierte Erweiterungen nur bis zum Neustart, siehe die <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">Installationsanleitung</a>.',
+    'The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Chromium browsers: unzip the file, open the extensions page, enable developer mode, "Load unpacked". Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.':
+      'Die Erweiterung sendet den Link des offenen Tabs an diese Seite (mit den Cookies der Seite, wenn du es in ihren Einstellungen erlaubst). Chromium-Browser: Datei entpacken, die Erweiterungsseite öffnen, den Entwicklermodus einschalten, „Entpackte Erweiterung laden“. Firefox behält unsignierte Erweiterungen nur bis zum Neustart, siehe die <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">Installationsanleitung</a>.',
     'Chromium extension': 'Chromium-Erweiterung',
     'Firefox extension': 'Firefox-Erweiterung',
     'Report a problem': 'Problem melden',
@@ -70,13 +70,13 @@
     'waiting': 'wartet',
     'show': 'anzeigen',
     'hide': 'ausblenden',
-    'tap to cancel': 'zum Abbrechen tippen',
+    'cancel?': 'abbrechen?',
     'starting …': 'startet …',
     'finishing …': 'schließt ab …',
     'loading {pct} %': 'lädt {pct} %',
     '{label}: only when the running job is done': '{label}: erst, wenn der laufende Auftrag fertig ist',
     '{label} is loading.': '{label} wird geladen.',
-    'tap again': 'nochmal tippen',
+    'tap again': 'nochmal',
     'sending …': 'sendet …',
     'sent': 'gesendet',
 
@@ -90,8 +90,7 @@
       'Die gespeicherten YouTube-Cookies sind abgelaufen. Sende einmal über die Erweiterung (sie schickt frische) oder entferne sie unter „Cookies“.',
     'YouTube refused the download (403). Usually temporary: tap retry.':
       'YouTube hat den Download abgelehnt (403). Meist vorübergehend: tippe auf „erneut“.',
-    'YouTube wants a sign-in. Send cookies via the extension and try again.':
-      'YouTube verlangt eine Anmeldung. Sende Cookies über die Erweiterung und versuch es noch einmal.',
+    'YouTube wants a sign-in: send your cookies (extension setting "Send my cookies" or Cookies in the web UI), then retry.': 'YouTube verlangt eine Anmeldung: sende deine Cookies (Erweiterung, Einstellung „Send my cookies“, oder „Cookies“ hier in der Web-UI) und tippe dann auf „erneut“.',
     'Video is private or unavailable.': 'Das Video ist privat oder nicht verfügbar.',
     'Error': 'Fehler',
     'no text found': 'kein Text gefunden',
@@ -114,6 +113,7 @@
 
     // app.js
     'Access token needed.': 'Zugangstoken nötig.',
+    'That token is wrong. Enter it again.': 'Dieses Token ist falsch. Gib es noch einmal ein.',
     'MeTube refused.': 'MeTube hat abgelehnt.',
     'Paste': 'Einfügen',
     'Clear': 'Leeren',

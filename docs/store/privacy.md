@@ -9,8 +9,9 @@ MeTube Companion is a browser extension for people who run their own [MeTube](ht
 | Data | When | Sent to |
 |---|---|---|
 | The link of the current tab (or a link you right-click) | Only when you press send | Your own MeTube Companion instance, at the address you entered |
-| Your cookies for that site, only for YouTube, Instagram and TikTok links, and only if you ticked "Send my cookies" in the settings | When you press send, so the server can download content you are signed in for | Your own instance only (as a `cookies.txt` for yt-dlp) |
+| Your cookies for that site, only for YouTube, Instagram and TikTok links, and only if you ticked "Send my cookies" in the settings (off by default), and only to an `https://` address or this computer | When you press send, so the server can download content you are signed in for | Your own instance only (as a `cookies.txt` for yt-dlp) |
 | The video ID | When you request a transcript, to find the spoken language | Your own instance, which fetches the public YouTube page without cookies |
+| The video ID, as part of an image address | When the popup shows the last video | YouTube's image server `i.ytimg.com`, an ordinary image request for the thumbnail |
 | Instance address, optional access token, download settings, the last link and running jobs | Stored locally in the browser (`storage`) | Nowhere |
 
 Cookies of other sites, including your Google account, are never read or sent. Nothing is sold, shared with third parties or used for anything other than sending your downloads to your own server.

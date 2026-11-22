@@ -2,7 +2,9 @@
 # (host:port from METUBE_URL, see docker/16-metube-upstream.envsh) is MeTube, ${RETENTION_DAYS} and ${TRASH_DAYS} feed the "days left" hints in the UI,
 # ${NGINX_LOCAL_RESOLVERS} comes from /etc/resolv.conf, ${COMPANION_TOKEN}
 # (optional) protects everything that touches MeTube or files,
-# ${YOUTUBE_WATCH_URL} is YouTube's watch page (a mock in the factory sandbox).
+# ${YOUTUBE_WATCH_URL} is YouTube's watch page (a mock in the factory sandbox),
+# ${COMPANION_HOSTS_MAP} and ${COMPANION_HOSTS_DEFAULT} come from
+# COMPANION_HOSTS (docker/17-companion-hosts.envsh).
 # Downloads are mounted at /downloads.
 
 # CORS only for the extension (Firefox moz-extension://, Chromium
@@ -29,6 +31,23 @@ map $metube_ext_origin $ext_cors_headers {
 map "$request_method:$metube_ext_origin" $ext_preflight {
     "~^OPTIONS:." 1;
     default "";
+}
+
+# DNS rebinding: a web page whose name the attacker later points at this
+# machine would be same-origin here and could use everything (without a
+# token). So only these names are served: localhost, IP addresses, names
+# without a dot (nas), local suffixes nobody can register, and COMPANION_HOSTS.
+map $host $host_ok {
+    hostnames;
+    default ${COMPANION_HOSTS_DEFAULT};
+    .localhost 1;
+    .local 1;
+    .home.arpa 1;
+    .internal 1;
+    "~^[0-9.]+$" 1;
+    "~^\[[0-9a-f:.]+\]$" 1;
+    "~^[a-z0-9-]+$" 1;
+   ${COMPANION_HOSTS_MAP}
 }
 
 # Optional access token: sent by the extension as X-Companion-Token, by the
@@ -110,6 +129,17 @@ server {
     root /usr/share/nginx/html;
     index index.html;
     client_max_body_size 2m;
+
+    # DNS rebinding guard, see $host_ok.
+    error_page 421 @misdirected;
+    if ($host_ok = 0) {
+        return 421;
+    }
+    location @misdirected {
+        default_type text/plain;
+        add_header X-Content-Type-Options "nosniff" always;
+        return 421 "MeTube Companion does not answer to this address. Add the name to COMPANION_HOSTS (see INSTALL.md).\n";
+    }
 
     # Web UI: same origin, MeTube's CORS guard sees same-origin.
     location /api/ {
@@ -268,5 +298,8 @@ server {
     location / {
         try_files $uri $uri/ /index.html;
         add_header Cache-Control "no-cache" always;
+        # No framing by other pages (clickjacking on delete).
+        add_header Content-Security-Policy "frame-ancestors 'none'" always;
+        add_header X-Frame-Options "DENY" always;
     }
 }

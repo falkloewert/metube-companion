@@ -32,12 +32,14 @@ Demo content: Blender open movies and "Me at the zoo".
 **On your own computer** (Docker Desktop on Windows/macOS, Docker on Linux): MeTube and the companion together, reachable only from this computer.
 
 ```sh
+mkdir metube-companion
+cd metube-companion
 curl -O https://raw.githubusercontent.com/falkloewert/metube-companion/main/compose.desktop.yml
 docker compose -f compose.desktop.yml up -d
 # open http://localhost:8081
 ```
 
-Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at 12:00 (time zone `TZ`, default UTC), so YouTube changes are picked up automatically. On Linux set `PUID`/`PGID` to your user (`id`).
+Windows PowerShell: type `curl.exe` instead of `curl`. Downloads go to `./downloads` inside that folder (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at 12:00 (time zone `TZ`, default UTC), so YouTube changes are picked up automatically. On Linux set `PUID`/`PGID` to your user (`id`).
 
 **Next to an existing MeTube** (server, NAS): copy the `companion` service from [`compose.server.yml`](compose.server.yml) into the compose file that runs MeTube, add the four required MeTube settings marked there, and open `http://<server>:8082`.
 
@@ -49,6 +51,7 @@ Downloads go to `./downloads` (set `METUBE_DOWNLOADS` to change it). MeTube upda
 | `RETENTION_DAYS` | `0` | Delete files in the download folder older than this many days (0 = never; hidden folders such as MeTube's `.metube` state are skipped); the UI shows the days left |
 | `TRASH_DAYS` | `7` | Deleting a video (or "Clear all" with files) moves its files to the hidden folder `.trash` and removes them for good after this many days; the web UI has a Trash section with "Restore" and "Empty trash". `0` = no trash, files are deleted right away (and an existing `.trash` is emptied). A restored file gets a fresh `RETENTION_DAYS` period (the cleanup looks at the change time too) |
 | `COMPANION_TOKEN` | empty | Optional access token. The web UI asks for it once, the extension has a field for it. Empty = no check |
+| `COMPANION_HOSTS` | empty | Host names the companion answers to besides `localhost`, IP addresses, names without a dot (`nas`) and `.local`/`.home.arpa`/`.internal`; e.g. `metube.example.com` or `.example.com` for a whole domain, `*` for any. Guards against DNS rebinding; other names get "421" |
 | `user:` (compose) | | Run as the owner of the downloads folder, otherwise deleting files fails |
 
 Mount the MeTube download folder at `/downloads`. The container listens on port 8080.
