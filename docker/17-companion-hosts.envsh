@@ -16,3 +16,7 @@ for h in $(printf '%s' "${COMPANION_HOSTS:-}" | tr ',' ' '); do
 done
 set +f
 export COMPANION_HOSTS_MAP="$map" COMPANION_HOSTS_DEFAULT="$def"
+
+# The token (checked by 05-check-token.sh) as a case-sensitive nginx regex.
+COMPANION_TOKEN_RE=$(printf '%s' "${COMPANION_TOKEN:-}" | sed 's/\./\\./g')
+export COMPANION_TOKEN_RE

@@ -34,7 +34,7 @@ if [ "$IMAGE" = "metube-companion:smoke" ]; then
 fi
 
 sed -e "s#ghcr.io/falkloewert/metube-companion:latest#$IMAGE#" \
-    -e 's#RETENTION_DAYS: "0"#RETENTION_DAYS: "${RETENTION_DAYS:-0}"\n      COMPANION_TOKEN: "${COMPANION_TOKEN:-}"\n      CLEANUP_INTERVAL: "${CLEANUP_INTERVAL:-3600}"#' \
+    -e 's#RETENTION_DAYS: "0"#RETENTION_DAYS: "${RETENTION_DAYS:-0}"\n      CLEANUP_INTERVAL: "${CLEANUP_INTERVAL:-3600}"#' \
     -e 's#TRASH_DAYS: "7"#TRASH_DAYS: "${TRASH_DAYS:-7}"#' \
     compose.desktop.yml > "$WORK/compose.yml"
 mkdir -p "$WORK/downloads"
@@ -63,6 +63,11 @@ check 404 "hidden paths blocked (state folder)" "$B/files/.metube/state"
 curl -s "$B/yt/notanid" | grep -q "MeTube Companion" && ok "/yt/ only proxies video IDs" || bad "/yt/ proxied a non-ID"
 check 421 "unknown host name refused (DNS rebinding)" -H 'Host: rebind.example.com' "$B/api/history"
 check 200 "host name without a dot allowed" -H 'Host: nas' "$B/healthz"
+check 204 "extension preflight to an unknown name answered" -X OPTIONS -H 'Host: rebind.example.com' -H 'Origin: chrome-extension://abcdefghijklmnop' -H 'Access-Control-Request-Method: GET' "$B/ext/history"
+curl -s -D - -o /dev/null -H 'Host: rebind.example.com' -H 'Origin: chrome-extension://abcdefghijklmnop' "$B/ext/history" | grep -qi '^access-control-allow-origin: chrome-extension' \
+  && ok "extension can read the 421 hint" || bad "421 without CORS for the extension"
+curl -s -D - -o /dev/null -X OPTIONS -H 'Host: rebind.example.com' -H 'Origin: https://evil.example' "$B/ext/history" | grep -qi '^access-control' \
+  && bad "421 gives CORS to a web page" || ok "421 gives no CORS to a web page"
 curl -sI "$B/" | grep -qi '^x-frame-options: DENY' && ok "web UI cannot be framed" || bad "web UI can be framed"
 curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/ext/yt/jNQXAC9IVRw" \
   | grep -qi '^access-control-allow-origin: moz-extension://x' && ok "extension language lookup (/ext/yt/, CORS)" || bad "extension language lookup (/ext/yt/)"
@@ -230,6 +235,7 @@ check 401 "trash listing without token" "$B/files/.trash/"
 check 200 "API with header" -H 'X-Companion-Token: smoke-token-1234567890' "$B/api/history"
 check 200 "API with cookie" -b 'companion_token=smoke-token-1234567890' "$B/api/history"
 check 401 "wrong token" -H 'X-Companion-Token: wrong-token-123456789' "$B/api/history"
+check 401 "token is case-sensitive" -H 'X-Companion-Token: SMOKE-TOKEN-1234567890' "$B/api/history"
 curl -s "$B/config.js" | grep -q 'authRequired: 1' && ok "config.js reports the token" || bad "config.js: $(curl -s "$B/config.js")"
 
 echo "unsafe tokens are rejected"
@@ -239,6 +245,10 @@ for t in 'short"x' '~aaaaaaaaaaaaaaaaaa' "$(printf 'aaaaaaaaaaaaaaaaaa\n; }')"; 
   docker compose -p "$P" -f "$WORK/compose.yml" logs --since 10s companion 2>&1 | grep -q "COMPANION_TOKEN must be" \
     && ok "container refuses '$t'" || bad "unsafe token '$t' not rejected"
 done
+COMPANION_TOKEN=change-me-to-a-long-random-string up companion
+sleep 3
+docker compose -p "$P" -f "$WORK/compose.yml" logs --since 10s companion 2>&1 | grep -q "still the example value" \
+  && ok "container refuses the example token" || bad "example token not rejected"
 
 echo
 [ $fails -eq 0 ] && echo "smoke test passed" || { echo "smoke test: $fails failure(s)"; exit 1; }

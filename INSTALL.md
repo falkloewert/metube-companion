@@ -57,7 +57,7 @@ curl -O https://raw.githubusercontent.com/falkloewert/metube-companion/main/comp
 docker compose -f compose.desktop.yml up -d
 ```
 
-Apply the decisions in a file `.env` next to `compose.desktop.yml` (one `NAME=value` per line; Windows Notepad: save as "All files" so it does not become `.env.txt`), then run `docker compose -f compose.desktop.yml up -d` again: `METUBE_DOWNLOADS`, `COMPANION_PORT` (6, then also enter the new port in the extension settings), `PUID`/`PGID` (7), `TZ` and `YTDL_UPDATE_TIME` (10). Edit `compose.desktop.yml` only for `RETENTION_DAYS` (4), `COMPANION_TOKEN` (5) and the optional `updater` service (10).
+Apply the decisions in a file `.env` next to `compose.desktop.yml` (one `NAME=value` per line; Windows Notepad: save as "All files" so it does not become `.env.txt`), then run `docker compose -f compose.desktop.yml up -d` again: `METUBE_DOWNLOADS`, `COMPANION_PORT` (6, then also enter the new port in the extension settings), `PUID`/`PGID` (7), `TZ` and `YTDL_UPDATE_TIME` (10), and if needed `COMPANION_TOKEN` and `COMPANION_HOSTS` (5). Edit `compose.desktop.yml` only for `RETENTION_DAYS` (4) and the optional `updater` service (10).
 
 ### 4.2 Server or NAS
 
@@ -74,7 +74,7 @@ Apply the decisions in a file `.env` next to `compose.desktop.yml` (one `NAME=va
   ```
   Then `docker compose -f compose.desktop.yml up -d`.
 - **Replacing an existing MeTube setup** with the bundled one (same download folder): older files without a history entry show up as cards with save and delete (requesting more formats needs the YouTube ID in the file name). `RETENTION_DAYS` applies to them too. Leave `cookies.txt` behind if the extension should send fresh cookies.
-- **Behind a reverse proxy:** point it at the companion, not at MeTube: container port `8080` (for example `metube-companion:8080` on a shared Docker network) or the published host port, and put the public name into `COMPANION_HOSTS` (decision 5). `/healthz` answers `ok` and suits uptime monitors.
+- **Behind a reverse proxy:** point it at the companion, not at MeTube: container port `8080` (service name `companion`, so `companion:8080` when the proxy is on the same Docker network: add that network to the `companion` service under `networks:`) or the published host port, and put the public name into `COMPANION_HOSTS` (decision 5). `/healthz` answers `ok` and suits uptime monitors.
 
 Existing MeTube files without the video ID in their name still work, but are grouped by title only.
 
@@ -83,7 +83,7 @@ Existing MeTube files without the video ID in their name still work, but are gro
 1. Download `metube-companion-chromium.zip` (Chrome, Brave, Edge) or `metube-companion-firefox.xpi` from the [releases](https://github.com/falkloewert/metube-companion/releases).
 2. Chromium: unzip into a folder that stays, open `chrome://extensions` (or `brave://extensions`), enable developer mode, "Load unpacked", choose the folder.
    Firefox: `about:debugging#/runtime/this-firefox`, "Load Temporary Add-on" (removed on restart; permanent install needs Mozilla signing until the store listing exists).
-3. The settings page opens on first install: enter the address (desktop: keep `http://localhost:8081`), press Save, allow access when the browser asks. It reports "Saved and connected" when it works.
+3. The settings page opens on first install: enter the address (desktop: keep `http://localhost:8081`), tick "Send my cookies" only if you want that (decision 8; the browser then asks), press Save. It reports "Saved and connected" when it works.
 
 ## 5. Verify
 
@@ -97,12 +97,12 @@ Existing MeTube files without the video ID in their name still work, but are gro
 
 | Symptom | Cause and fix |
 |---|---|
-| "Sign in to confirm you're not a bot" | YouTube wants a signed-in session: send cookies via the extension or upload `cookies.txt` (decision 8). |
-| Text fails with 429 | The `text` preset in `YTDL_OPTIONS_PRESETS` is missing on MeTube. |
+| "YouTube wants a sign-in" ("Sign in to confirm you're not a bot") | YouTube wants a signed-in session: send cookies via the extension or upload `cookies.txt` (decision 8). |
+| "YouTube is blocking requests right now (too many)" (429) | YouTube limits this IP; wait. If only Text fails with it every time: the `text` preset in `YTDL_OPTIONS_PRESETS` is missing on MeTube. |
 | Formats of a video are not grouped | `OUTPUT_TEMPLATE` without `[%(id)s]` on MeTube. |
 | Deleting fails | The companion does not run as the owner of the download folder (`user:`). |
 | "Clear all" → "Keep files" deletes files anyway | MeTube has `DELETE_FILE_ON_TRASHCAN` set to `true`; set it to `ask`. |
-| Extension: "Cannot reach …" | Wrong address (it must be the companion, not MeTube itself), not on the same network/VPN, or access not allowed in the settings page. |
+| Extension: "Cannot reach …" or "Saved, but … is not reachable" | Wrong address (it must be the companion, not MeTube itself), not on the same network/VPN, or a login proxy that does not let `/ext/` and `/files/` through (decision 5). |
 | "421", "does not answer to this address" | The instance is opened by a name it does not know: add it to `COMPANION_HOSTS` (decision 5), or use the IP address. |
 | Web UI asks for an access token, extension says "protected" or "token" | `COMPANION_TOKEN` is set: enter it in the web UI once and in the extension settings. |
 | Extension: "looks like MeTube without the companion" | The address points to MeTube itself; use the companion's address and port. |

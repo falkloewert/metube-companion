@@ -16,6 +16,8 @@
     '<strong>This instance is protected.</strong> Enter the access token (COMPANION_TOKEN) once; this browser remembers it.':
       '<strong>Diese Instanz ist geschützt.</strong> Gib das Zugangstoken (COMPANION_TOKEN) einmal ein; dieser Browser merkt es sich.',
     'Access token': 'Zugangstoken',
+    'Locked': 'Gesperrt',
+    'Token': 'Token',
     'Unlock': 'Entsperren',
     'Link': 'Link',
     'Paste a link': 'Link einfügen',
@@ -66,7 +68,7 @@
     'save': 'speichern',
     'request': 'anfordern',
     'loading …': 'lädt …',
-    'retry': 'erneut',
+    'retry': 'wiederholen',
     'waiting': 'wartet',
     'show': 'anzeigen',
     'hide': 'ausblenden',
@@ -89,8 +91,8 @@
     'The stored YouTube cookies have expired. Send once via the extension (it sends fresh ones) or remove them under "Cookies".':
       'Die gespeicherten YouTube-Cookies sind abgelaufen. Sende einmal über die Erweiterung (sie schickt frische) oder entferne sie unter „Cookies“.',
     'YouTube refused the download (403). Usually temporary: tap retry.':
-      'YouTube hat den Download abgelehnt (403). Meist vorübergehend: tippe auf „erneut“.',
-    'YouTube wants a sign-in: send your cookies (extension setting "Send my cookies" or Cookies in the web UI), then retry.': 'YouTube verlangt eine Anmeldung: sende deine Cookies (Erweiterung, Einstellung „Send my cookies“, oder „Cookies“ hier in der Web-UI) und tippe dann auf „erneut“.',
+      'YouTube hat den Download abgelehnt (403). Meist vorübergehend: tippe auf „wiederholen“.',
+    'YouTube wants a sign-in: send your cookies (extension setting "Send my cookies" or Cookies in the web UI), then retry.': 'YouTube verlangt eine Anmeldung: sende deine Cookies (Erweiterung, Einstellung „Send my cookies“, oder „Cookies“ hier in der Web-UI) und tippe dann auf „wiederholen“.',
     'Video is private or unavailable.': 'Das Video ist privat oder nicht verfügbar.',
     'Error': 'Fehler',
     'no text found': 'kein Text gefunden',

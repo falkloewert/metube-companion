@@ -8,4 +8,6 @@ case "$u" in
 esac
 u="${u%%/*}"
 case "$u" in *:*) ;; *) u="$u:80" ;; esac
+# Goes into the nginx config verbatim.
+printf '%s' "$u" | grep -Eqx '([A-Za-z0-9._-]+|\[[0-9A-Fa-f:.]+\]):[0-9]{1,5}' || { echo "METUBE_URL must be http://host:port (got '$u')" >&2; exit 1; }
 export METUBE_UPSTREAM="$u"

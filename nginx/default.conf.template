@@ -56,13 +56,15 @@ map "${COMPANION_TOKEN}" $auth_on {
     "" 0;
     default 1;
 }
+# Regex keys: plain map keys compare without case. ${COMPANION_TOKEN_RE} is
+# the token with escaped dots (docker/17-companion-hosts.envsh).
 map $http_x_companion_token $token_header {
     default 0;
-    "${COMPANION_TOKEN}" 1;
+    "~^${COMPANION_TOKEN_RE}$" 1;
 }
 map $cookie_companion_token $token_cookie {
     default 0;
-    "${COMPANION_TOKEN}" 1;
+    "~^${COMPANION_TOKEN_RE}$" 1;
 }
 map "$auth_on$token_header$token_cookie" $auth_ok {
     ~^0 1;
@@ -131,13 +133,22 @@ server {
     client_max_body_size 2m;
 
     # DNS rebinding guard, see $host_ok.
-    error_page 421 @misdirected;
+    error_page 421 = @misdirected;
     if ($host_ok = 0) {
         return 421;
     }
+    # The extension reads this via CORS, so it can show the hint instead of
+    # "not reachable" (preflight answered, the request then gets the 421).
     location @misdirected {
         default_type text/plain;
         add_header X-Content-Type-Options "nosniff" always;
+        add_header Access-Control-Allow-Origin $metube_ext_origin always;
+        add_header Access-Control-Allow-Credentials $ext_cors_credentials always;
+        add_header Access-Control-Allow-Headers $ext_cors_headers always;
+        add_header Vary Origin always;
+        if ($ext_preflight) {
+            return 204;
+        }
         return 421 "MeTube Companion does not answer to this address. Add the name to COMPANION_HOSTS (see INSTALL.md).\n";
     }
 

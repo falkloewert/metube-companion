@@ -39,7 +39,7 @@ docker compose -f compose.desktop.yml up -d
 # open http://localhost:8081
 ```
 
-Windows PowerShell: type `curl.exe` instead of `curl`. Downloads go to `./downloads` inside that folder (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at 12:00 (time zone `TZ`, default UTC), so YouTube changes are picked up automatically. On Linux set `PUID`/`PGID` to your user (`id`).
+Windows PowerShell: type `curl.exe` instead of `curl`. Downloads go to `./downloads` inside that folder (set `METUBE_DOWNLOADS` to change it). MeTube updates yt-dlp at start and every day at 12:00 (time zone `TZ`, default UTC), so YouTube changes are picked up automatically. On Linux set `PUID`/`PGID` to your user (`id`) in a file `.env` next to the compose file.
 
 **Next to an existing MeTube** (server, NAS): copy the `companion` service from [`compose.server.yml`](compose.server.yml) into the compose file that runs MeTube, add the four required MeTube settings marked there, and open `http://<server>:8082`.
 
@@ -80,7 +80,7 @@ Tested with MeTube 2026.11 (yt-dlp 2026.10) on Linux. Windows (Docker Desktop) a
 
 ## Security
 
-MeTube Companion has **no user accounts**. Run it on your home network or behind a VPN. `COMPANION_TOKEN` adds a shared access token for everything that touches MeTube or your files; over plain HTTP the token can be read on the network, so use HTTPS when you set it. To expose it to the internet, put an authenticating reverse proxy (Authelia, Authentik, oauth2-proxy, basic auth) with HTTPS in front, and still set the token: the extension cannot pass a login page, so let the proxy pass `/ext/` and `/files/` without login and rely on the token there.
+MeTube Companion has **no user accounts**. Run it on your home network or behind a VPN. `COMPANION_TOKEN` adds a shared access token for everything that touches MeTube or your files; over plain HTTP the token can be read on the network, so use HTTPS when you set it. To expose it to the internet, put an authenticating reverse proxy (Authelia, Authentik, oauth2-proxy, basic auth) with HTTPS in front, and still set the token: the extension cannot pass a login page, so let the proxy pass `/ext/` and `/files/` without login and rely on the token there. Other browser extensions you install can reach the instance like this one does; the token covers that too.
 
 ## Contributing
 

@@ -2,10 +2,10 @@
 
 ## Unreleased
 
-Note: update the image and the extension together. **If you open the companion by a domain name** (reverse proxy, `nas.example.com`, `*.ts.net`), add it to the new `COMPANION_HOSTS`, otherwise it answers "421". IP addresses, `localhost`, names without a dot and `.local` keep working.
+Note: update the image and the extension together. **If you open the companion by a domain name** (reverse proxy, `nas.example.com`, `*.ts.net`), add it to the new `COMPANION_HOSTS`, otherwise it answers "421". IP addresses, `localhost`, names without a dot and `.local` keep working. `compose.desktop.yml` now takes `COMPANION_TOKEN` and `COMPANION_HOSTS` from `.env`: if you set the token in the compose file before, move it to `.env` before replacing the file, otherwise the instance runs without a token.
 
 - Security: the companion only answers to known host names (`COMPANION_HOSTS`, see above). Without it, a web page could use DNS rebinding to reach an instance without a token, including the desktop setup on `localhost`. The web UI can no longer be framed by other pages.
-- Extension: sending cookies is optional and off by default. Installing asks only for `localhost:8081`, no cookie or website access; the settings page (opens after installing) has "Send my cookies with YouTube, Instagram and TikTok links", asked by the browser together with the instance address. Cookies only go to an `https://` address or this computer.
+- Extension: sending cookies is optional and off by default. Installing asks for no website or cookie access at all (the instance answers the extension via CORS, so its address needs no permission); the settings page (opens after installing) has "Send my cookies with YouTube, Instagram and TikTok links", and only then the browser asks. Cookies only go to an `https://` address or this computer.
 - Extension: the spoken language of a transcript is looked up through the instance (`/ext/yt/<id>`, the same as the web UI) instead of fetching YouTube directly.
 - Firefox extension: the popup said "Cannot reach ..." although the instance answered, and the format bar did not see existing files (showed "request" instead of "save"). Firefox applies CORS to extension pages; the read-only `/files/` listing and `/ext/yt/` now answer extension origins (GET only, never MOVE or DELETE). The popup checks the instance via `/ext/`, so a login proxy that lets `/ext/` and `/files/` through (INSTALL.md) works.
 - Extension settings: the status line sits under Save; a name the instance does not know ("421") is explained.

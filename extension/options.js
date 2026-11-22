@@ -1,9 +1,8 @@
 'use strict';
 
 // Desktop setup default (DEFAULT_BASE from compat.js); other instances are set
-// here. Saving asks the browser for access to that address and, if ticked,
-// to the site cookies (optional permissions), then checks that a MeTube
-// Companion answers there.
+// here. Saving asks the browser for the site cookies if ticked (optional
+// permissions), then checks that a MeTube Companion answers there.
 const base = document.getElementById('base');
 const status = document.getElementById('status');
 const token = document.getElementById('token');
@@ -50,22 +49,21 @@ document.getElementById('save').addEventListener('click', async () => {
     say('Cookies are only sent to an https:// address or to this computer. Use HTTPS for your instance or untick the cookies.', true);
     return;
   }
-  // One prompt for the address and, if ticked, the cookies. Must run directly
-  // in the click handler, browsers only allow it there.
-  const request = { origins: [origin + '/*'] };
+  // The instance needs no permission (it answers the extension via CORS);
+  // only the cookies do. Must run directly in the click handler, browsers
+  // only allow the prompt there.
   if (cookies.checked) {
-    const c = cookiePermissions();
-    Object.assign(request, c, { origins: request.origins.concat(c.origins) });
+    let granted = false;
+    try {
+      granted = await browser.permissions.request(cookiePermissions());
+    } catch (_) { /* treated as not granted */ }
+    if (!granted) {
+      say('The browser did not allow the cookies. Untick them to save without.', true);
+      return;
+    }
+  } else {
+    await browser.permissions.remove(cookiePermissions()).catch(() => {});
   }
-  let granted = false;
-  try {
-    granted = await browser.permissions.request(request);
-  } catch (_) { /* treated as not granted */ }
-  if (!granted) {
-    say('The browser did not allow access to ' + origin + (cookies.checked ? ' and the cookies. Untick the cookies to save without them.' : '. Without it the extension cannot reach your instance.'), true);
-    return;
-  }
-  if (!cookies.checked) await browser.permissions.remove(cookiePermissions()).catch(() => {});
   const tok = token.value.trim();
   await browser.storage.local.set({ base: value, token: tok, sendCookies: cookies.checked });
   say('Saved. Checking the connection …');

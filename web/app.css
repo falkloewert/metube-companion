@@ -141,6 +141,7 @@ a.title:hover { text-decoration: underline; }
   .composer .tiles { margin-top: 0; }
   .composer .tile { height: 64px; flex-direction: row; gap: 8px; }
   .composer .tile.armed .ask { margin: 0; }
+  .composer .tile.armed .ico { display: none; }
   .composer .status { grid-column: 1 / -1; margin-top: 0; }
   .kind.thumb { width: 88px; height: 50px; }
 }

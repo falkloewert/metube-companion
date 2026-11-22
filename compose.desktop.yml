@@ -10,7 +10,7 @@
 # Also fits a server without MeTube: put these lines into a .env file next to
 # this file (see INSTALL.md 4.2) instead of editing it.
 #   COMPANION_BIND=0.0.0.0    # reachable from other devices (no login!)
-#   COMPANION_PORT=8081
+#   COMPANION_PORT=8082
 #   TZ=Europe/Berlin
 #   YTDL_UPDATE_TIME=04:00
 
@@ -69,10 +69,12 @@ services:
       TRASH_DAYS: "7"
       # Optional access token (16-128 characters: A-Z a-z 0-9 . _ -), useful when
       # other devices can reach this instance.
-      # COMPANION_TOKEN: "change-me-to-a-long-random-string"
+      # Set it in .env as COMPANION_TOKEN=... (e.g. from: openssl rand -hex 24).
+      COMPANION_TOKEN: "${COMPANION_TOKEN:-}"
       # Names (besides IP addresses, localhost, "nas"-style names and .local)
-      # this instance is opened by, e.g. behind a reverse proxy (INSTALL.md 5).
-      # COMPANION_HOSTS: "metube.example.com"
+      # this instance is opened by, e.g. behind a reverse proxy (INSTALL.md,
+      # decision 5). In .env: COMPANION_HOSTS=metube.example.com
+      COMPANION_HOSTS: "${COMPANION_HOSTS:-}"
     ports:
       - "${COMPANION_BIND:-127.0.0.1}:${COMPANION_PORT:-8081}:8080"
     volumes:

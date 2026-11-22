@@ -35,7 +35,8 @@ function setStatus(text, bad) {
 
 function setConn(ok) {
   el.conn.classList.toggle('bad', !ok);
-  el.conn.textContent = ok ? t('Connected') : t('Offline');
+  // Asking for the token: the instance answers, it is only locked.
+  el.conn.textContent = ok ? t('Connected') : !$('login').hidden ? t('Locked') : t('Offline');
 }
 
 // Protected instance (COMPANION_TOKEN): the token lives in a cookie, so
@@ -44,6 +45,7 @@ function askToken() {
   const card = $('login');
   if (!card.hidden) return;
   card.hidden = false;
+  setConn(false);
   // A token cookie that still gets 401 is a wrong token.
   $('login-wrong').hidden = !/(^|;\s*)companion_token=/.test(document.cookie);
   $('token').focus();

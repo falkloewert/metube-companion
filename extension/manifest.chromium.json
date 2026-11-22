@@ -11,9 +11,6 @@
     "contextMenus",
     "notifications"
   ],
-  "host_permissions": [
-    "http://localhost:8081/*"
-  ],
   "background": {
     "service_worker": "background.js"
   },
@@ -35,8 +32,9 @@
     "open_in_tab": true
   },
   "optional_host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "https://*.youtube.com/*",
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
   ],
   "optional_permissions": [
     "cookies"

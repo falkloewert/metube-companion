@@ -26,8 +26,7 @@
     "alarms",
     "activeTab",
     "contextMenus",
-    "notifications",
-    "http://localhost:8081/*"
+    "notifications"
   ],
   "background": {
     "scripts": [
@@ -56,7 +55,8 @@
   },
   "optional_permissions": [
     "cookies",
-    "http://*/*",
-    "https://*/*"
+    "https://*.youtube.com/*",
+    "https://*.instagram.com/*",
+    "https://*.tiktok.com/*"
   ]
 }

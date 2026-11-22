@@ -32,7 +32,7 @@ for s in 48 96 128; do convert -background none -density 400 -resize ${s}x${s} -
 - **Text:** downloads the transcript. "show" opens a preview with word count, plus "Copy all" (running text) and "As .md" (title, source, text). The extension detects the spoken language from the YouTube page, fetched by your instance (`/ext/yt/<id>`, without cookies): the original audio track first (for AI-dubbed videos the default track is often German), then the only automatic caption track, then manual captions. English stays English, everything else becomes German.
 - **Right-click** on a link or page: "Send to MeTube" (always video).
 - **Notifications:** after sending, the extension polls for 32 seconds every 4 seconds; if that is not enough, an alarm checks every 30 seconds (Chromium; Firefox rounds up to 1 minute). It reports "MeTube: done" or "MeTube: error" as a browser notification, even with the popup closed. The "done" notification has a "Download to this computer" button; clicking the notification opens the source page. The notification icon must be PNG: Chromium rejects SVG and the notification fails silently.
-- **Instance address, access token, cookies:** set in the extension settings, which open on first install; saving asks the browser for access to that address (and to the site cookies, if ticked) and tests the connection.
+- **Instance address, access token, cookies:** set in the extension settings, which open on first install; saving asks the browser for the site cookies (only if ticked) and tests the connection. The instance itself needs no permission: the companion answers the extension via CORS (`/ext/`, `/files/`, `/ext/yt/`).
 
 ## Notes
 

@@ -13,8 +13,8 @@ if (typeof globalThis.browser === 'undefined' && typeof globalThis.chrome !== 'u
   });
 }
 
-// Desktop setup default; other instances are set on the options page, which
-// also asks for the host permission (optional_host_permissions).
+// Desktop setup default; other instances are set on the options page. No
+// host permission: the companion answers extension origins via CORS (nginx).
 const DEFAULT_BASE = 'http://localhost:8081';
 
 async function getBase() {
@@ -23,8 +23,7 @@ async function getBase() {
 }
 
 // Sending cookies is optional ("sendCookies" in storage): the settings page
-// asks for it (one browser prompt together with the instance address), never
-// the install.
+// asks for it, never the install.
 const COOKIE_ORIGINS = ['https://*.youtube.com/*', 'https://*.instagram.com/*', 'https://*.tiktok.com/*'];
 function cookiePermissions() {
   const p = { permissions: ['cookies'], origins: COOKIE_ORIGINS.slice() };

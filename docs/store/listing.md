@@ -5,7 +5,7 @@ Copy from here when submitting (#10). Package: the release assets `metube-compan
 ## Shared
 
 - **Name:** MeTube Companion
-- **Summary (max. 132 characters):** Send the current video to your own MeTube server: video, audio or transcript in two taps, with the cookies it needs.
+- **Summary (max. 132 characters):** Send the current video to your own MeTube server: video, audio or transcript in two taps, optionally with your sign-in.
 - **Category:** Chrome: Productivity (Tools). Firefox: Download Management.
 - **Homepage / support:** https://github.com/falkloewert/metube-companion
 - **Privacy policy URL:** https://github.com/falkloewert/metube-companion/blob/main/docs/store/privacy.md
@@ -17,7 +17,7 @@ MeTube Companion sends the page you are on to your own MeTube server (a self-hos
 
 - Video, Audio or Text: tap a tile once to pick, again to send.
 - Transcripts as plain text, ready to copy or save as Markdown; the spoken language is detected for YouTube.
-- Optional, off until you allow it on the settings page: sends your YouTube, Instagram or TikTok cookies with the link, so "Sign in to confirm you're not a bot" and videos you can only see signed in work. Other sites never get cookies.
+- Optional, off until you allow it on the settings page: sends your YouTube, Instagram or TikTok cookies with the link, for downloads that need your own sign-in. Other sites never get cookies.
 - Shows progress and notifies you when the download is done; save the file to this computer with one click.
 - Optional video quality (Best, 1080p, 720p, 480p) and audio format (M4A, MP3, Opus).
 - Open source (MIT), no tracking, no account.
@@ -35,7 +35,7 @@ Setup: install the container (see the homepage), then enter its address on the s
   - activeTab: Reads the current tab's URL when the user opens the popup.
   - contextMenus: Adds "Send to MeTube" to the right-click menu for links and pages.
   - notifications: Tells the user when a download is done or failed.
-  - Host permissions: localhost:8081 as the default server. Optional, each only after the user approves it on the settings page: the server address the user enters (any host, because the server can be at any address on the user's network), and YouTube, Instagram, TikTok together with the cookies permission.
+  - Host permissions: none required. The user's server answers the extension itself (CORS), so its address needs no permission. Optional, only after the user ticks "Send my cookies" and approves the browser prompt: YouTube, Instagram, TikTok together with the cookies permission.
   - Remote code: No, all code is in the package.
 - **Data usage:** collects "Web history" (the link the user sends) and, only if the user allows cookies, "Authentication information" (site cookies); both go only to the user's own server. Not sold, not used for unrelated purposes, not used for creditworthiness. Certify all three statements.
 

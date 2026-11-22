@@ -14,12 +14,12 @@ MeTube Companion is a browser extension for people who run their own [MeTube](ht
 | The video ID, as part of an image address | When the popup shows the last video | YouTube's image server `i.ytimg.com`, an ordinary image request for the thumbnail |
 | Instance address, optional access token, download settings, the last link and running jobs | Stored locally in the browser (`storage`) | Nowhere |
 
-Cookies of other sites, including your Google account, are never read or sent. Nothing is sold, shared with third parties or used for anything other than sending your downloads to your own server.
+Cookies of other sites, including google.com (your Gmail or Drive), are never read or sent. Note that the youtube.com cookies are your signed-in YouTube session: on your server they are used for all its downloads, so anyone with access to your server downloads with that session. Use HTTPS for a server on your network; over plain HTTP the links and the access token are readable on that network (cookies are never sent that way). Nothing is sold, shared with third parties or used for anything other than sending your downloads to your own server.
 
 ## Permissions
 
 - **cookies** (optional, only if you tick "Send my cookies"; the browser asks you): read the cookies of YouTube, Instagram or TikTok when you send a link from there.
-- **host permissions:** `localhost:8081` and the instance address you enter (the browser asks you to allow it) to talk to your instance; YouTube, Instagram and TikTok only together with the optional cookies permission.
+- **host permissions:** none required (your instance answers the extension itself); YouTube, Instagram and TikTok only together with the optional cookies permission.
 - **storage:** keep your settings and the jobs in progress.
 - **activeTab, contextMenus:** take the current tab's link or a right-clicked link.
 - **notifications, alarms:** tell you when a download is done; check its progress meanwhile.

@@ -10,4 +10,9 @@ if ! printf '%s' "$t" | grep -Eqx '[A-Za-z0-9._-]{16,128}' || [ "$(printf '%s' "
   echo "token: COMPANION_TOKEN must be 16-128 characters of A-Z a-z 0-9 . _ -" >&2
   exit 1
 fi
+# The example value from the compose files is public.
+if [ "$t" = "change-me-to-a-long-random-string" ]; then
+  echo "token: COMPANION_TOKEN is still the example value; set your own (for example: openssl rand -hex 24)" >&2
+  exit 1
+fi
 echo "token: on"
