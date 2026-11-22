@@ -6,7 +6,7 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 
 <p align="center"><img src="docs/demo.gif" alt="Text preview, saving as Markdown, requesting a thumbnail with progress in the cell, delete confirmation" width="380"></p>
 
-<p align="center"><a href="docs/demo.mp4">Watch the 71 s demo (MP4, 5.0 MB): extension, web UI, phone</a></p>
+<p align="center"><a href="docs/demo.mp4">Watch the 76 s demo (MP4, 5.2 MB): extension, web UI, phone</a></p>
 
 ## What it does
 

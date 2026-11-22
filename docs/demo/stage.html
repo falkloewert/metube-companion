@@ -35,6 +35,9 @@
   #desk { width: 800px; height: 408px; border: 0; display: block; }
   #deskCap { position: absolute; left: 0; right: 0; bottom: 0; height: 100px; background: #121821; border-top: 1px solid #263041;
     display: flex; align-items: center; justify-content: center; }
+  /* soft fade above the caption band: cards scroll under it instead of being sliced by its edge */
+  #deskCap::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100px; height: 64px; pointer-events: none;
+    background: linear-gradient(to top, #0f1216, rgba(15,18,22,0)); }
   #deskCap .line { font-size: 54px; font-weight: 700; letter-spacing: -.01em; transition: opacity .3s ease; }
   #deskCap.swap .line { opacity: 0; }
 

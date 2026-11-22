@@ -67,28 +67,27 @@ pieces.append((cur, b, 1))
 
 
 def popup_flashes(src):
-    """pts of frames showing a window that is mapped but not painted yet (a pure white
+    """Indexes of frames showing a window that is mapped but not painted yet (a pure white
     box for a moment: context menu, notification). They are dropped; the previous frame stays."""
     w, h = 96, 54
-    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', src, '-vf', f'scale={w}:{h}:flags=area,format=gray', '-f', 'rawvideo', '-'],
+    # passthrough: x11grab timestamps have gaps, and the default frame-rate sync would
+    # duplicate or drop frames here, so the indexes would no longer match the decoded frames
+    raw = subprocess.run(['ffmpeg', '-v', 'error', '-i', src, '-fps_mode', 'passthrough', '-vf', f'scale={w}:{h}:flags=area,format=gray', '-f', 'rawvideo', '-'],
                          check=True, capture_output=True).stdout
     white = (np.frombuffer(raw, dtype=np.uint8).reshape(-1, h, w) > 235).mean(axis=(1, 2))
-    pts = [float(x.strip(',')) for x in subprocess.run(
-        ['ffprobe', '-v', 'error', '-select_streams', 'v', '-show_entries', 'frame=pts_time', '-of', 'csv=p=0', src],
-        check=True, capture_output=True, text=True).stdout.split()]
     bad = []
     for i in range(1, len(white) - 5):
         base = white[i - 1]
         if white[i] - base > 0.02:
             run = [j for j in range(i, i + 5) if white[j] - base > 0.02]
             if run == list(range(i, i + len(run))) and len(run) <= 4 and white[i + len(run)] - base <= 0.02:
-                bad += [pts[j] for j in run]
+                bad += run
     return bad
 
 
 flash = popup_flashes(os.path.join(OUT, 'x11.mkv'))
 print(f'dropping {len(flash)} frames of unpainted popups')
-drop = '+'.join(f'between(t,{t - 0.004:.3f},{t + 0.004:.3f})' for t in flash) or '0'
+drop = '+'.join(f'eq(n,{i})' for i in flash) or '0'
 chain = f"[0:v]select='not({drop})',split={len(pieces)}" + ''.join(f'[s{i}]' for i in range(len(pieces))) + ';'
 chain += ''.join(
     f"[s{i}]trim=start={p0:.3f}:end={p1:.3f},setpts=(PTS-STARTPTS)/{sp},fps={FPS}[v{i}];" for i, (p0, p1, sp) in enumerate(pieces))

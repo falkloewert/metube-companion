@@ -101,7 +101,7 @@ const overlayScript = () => {
     root.style.cssText = 'position:fixed;inset:0;z-index:2147483647;pointer-events:none;font-family:"Liberation Sans","DejaVu Sans",Arial,sans-serif;';
     const cap = document.createElement('div');
     cap.id = 'demo-cap';
-    cap.style.cssText = 'position:absolute;left:20px;bottom:42px;max-width:470px;padding:10px 18px 12px;border-radius:16px;background:#0a0e14;color:#f2f5f9;font-size:26px;font-weight:700;line-height:1.22;letter-spacing:-.01em;opacity:0;transition:opacity .3s;';
+    cap.style.cssText = 'position:absolute;left:20px;bottom:240px;max-width:400px;padding:10px 18px 12px;border-radius:16px;background:#0a0e14;color:#f2f5f9;font-size:26px;font-weight:700;line-height:1.22;letter-spacing:-.01em;opacity:0;transition:opacity .3s;';
     const badge = document.createElement('div');
     badge.id = 'demo-badge';
     badge.style.cssText = 'position:absolute;left:20px;top:16px;padding:4px 16px 6px;border-radius:999px;background:#4f8dff;color:#fff;font-size:34px;font-weight:700;opacity:0;transition:opacity .2s;box-shadow:0 2px 10px rgba(0,0,0,.5);';
@@ -591,7 +591,7 @@ async function webParts(browser) {
   await badge('… ready', true);   // the second video of part 1 had to finish downloading
   await hold(0.9);
   await badge(null);
-  await hold(0.3);
+  await hold(1.7);   // the first caption stays readable for about 3 s
   await mark('desk-start');
 
   await deskCap('Transcripts as plain text. Copy or save as Markdown.');
@@ -650,7 +650,7 @@ async function webParts(browser) {
   await sleep(200);
   await scene('phoneScene', true);
   await showCur(true);
-  await cap('Phone', 'On Android it installs as an app and shows up in the share menu.');
+  await cap('Phone', 'On Android it installs as an app and opens with the link already filled in.');
   await hold(0.9);
   await mark('phone-shared');
   const tile = phone.locator('.tile[data-kind=video]');
