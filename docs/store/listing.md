@@ -22,7 +22,7 @@ MeTube Companion sends the page you are on to your own MeTube server (a self-hos
 - Optional video quality (Best, 1080p, 720p, 480p) and audio format (M4A, MP3, Opus).
 - Open source (MIT), no tracking, no account.
 
-Setup: install the container (see the homepage), then enter its address on the settings page that opens after installing.
+Setup: the extension does nothing on its own. First install the free MeTube Companion container on your computer or server (Quick start on the homepage), then enter its address on the settings page that opens after installing.
 
 ## Chrome Web Store: privacy tab
 
