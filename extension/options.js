@@ -54,16 +54,22 @@ document.getElementById('save').addEventListener('click', async () => {
   const tok = token.value.trim();
   await browser.storage.local.set({ base: value, token: tok });
   say('Saved. Checking the connection …');
+  let res;
   try {
-    const res = await fetch(value + '/ext/history', {
+    res = await fetch(value + '/ext/history', {
       credentials: 'include', headers: tok ? { 'X-Companion-Token': tok } : {}
     });
-    if (res.status === 401) throw new Error(tok ? 'The access token is wrong.' : 'This instance is protected, enter its access token.');
-    if (res.status === 404) throw new Error('This looks like MeTube without the companion. The extension needs MeTube Companion in front of MeTube.');
-    if (!res.ok) throw new Error('The instance answered with HTTP ' + res.status + '.');
+  } catch (_) {
+    say('Saved, but ' + origin + ' is not reachable. Check the address and that you are on the same network or VPN.', true);
+    return;
+  }
+  try {
+    if (res.status === 401) throw new Error(tok ? 'the access token is wrong.' : 'this instance is protected, enter its access token.');
+    if (res.status === 404) throw new Error('this looks like MeTube without the companion. The extension needs MeTube Companion in front of MeTube.');
+    if (!res.ok) throw new Error('the instance answered with HTTP ' + res.status + '.');
     await res.json();
     say('Saved and connected.');
   } catch (e) {
-    say('Saved, but the instance is not reachable: ' + (e.message || 'network error') + ' Check the address and that you are on the same network or VPN.', true);
+    say('Saved, but ' + (res.ok ? 'the answer is not from MeTube Companion. Check the address.' : e.message), true);
   }
 });

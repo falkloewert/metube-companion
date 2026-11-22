@@ -14,6 +14,17 @@ map $http_origin $metube_ext_origin {
     ~^chrome-extension:// $http_origin;
 }
 
+# Preflight of the extension (token header) for the read-only /files/
+# listing; other origins get no CORS headers at all.
+map "$request_method:$metube_ext_origin" $ext_preflight {
+    "~^OPTIONS:." 1;
+    default "";
+}
+map $metube_ext_origin $ext_cors_credentials {
+    "" "";
+    default "true";
+}
+
 # Optional access token: sent by the extension as X-Companion-Token, by the
 # web UI as cookie companion_token. Empty COMPANION_TOKEN = no check.
 map "${COMPANION_TOKEN}" $auth_on {
@@ -183,13 +194,25 @@ server {
     # files can only be deleted or moved into / out of the trash
     # (/downloads/.trash/<unix time>/<path>, see $files_rule above); downloads
     # still go through /api/download/. Hidden paths other than the trash
-    # (.tmp, .metube) are blocked. No CORS headers here: MOVE and DELETE need
-    # a preflight, so other web pages cannot use this path.
+    # (.tmp, .metube) are blocked. CORS only lets the extension read the
+    # listing (Firefox applies CORS to its pages): GET, never MOVE or DELETE,
+    # so other web pages cannot use this path.
     # A prefix location with a plain alias is required: nginx maps the
     # Destination header of MOVE with the config of the location, a regex
     # alias would resolve it to the source path again.
     location ^~ /files/ {
         alias /downloads/;
+        add_header Access-Control-Allow-Origin $metube_ext_origin always;
+        add_header Access-Control-Allow-Credentials $ext_cors_credentials always;
+        add_header Vary Origin always;
+        if ($ext_preflight) {
+            add_header Access-Control-Allow-Origin $metube_ext_origin always;
+            add_header Access-Control-Allow-Credentials "true" always;
+            add_header Access-Control-Allow-Headers "X-Companion-Token" always;
+            add_header Access-Control-Allow-Methods "GET" always;
+            add_header Vary Origin always;
+            return 204;
+        }
         if ($auth_ok = 0) {
             return 401;
         }
@@ -231,6 +254,8 @@ server {
     location = /healthz {
         access_log off;
         default_type text/plain;
+        add_header Access-Control-Allow-Origin $metube_ext_origin always;
+        add_header Vary Origin always;
         return 200 "ok\n";
     }
 

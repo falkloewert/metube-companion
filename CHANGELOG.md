@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- Firefox extension: the popup said "Cannot reach ..." although the instance answered, and the format bar did not see existing files (showed "request" instead of "save"). Firefox applies CORS to extension pages; `/healthz` and the read-only `/files/` listing now answer extension origins (GET only, never MOVE or DELETE). Needs the new image.
+- Extension: an unreachable instance says "Cannot reach <address> ..." instead of the browser's "Failed to fetch"; the settings page no longer adds the network hint to "the access token is wrong".
+- Extension: notification data of dismissed notifications is cleaned up.
+
 ## 0.3.0 - 2026-11-22
 
 - Web UI: German translation, picked from the browser language (first entry of the language list); everything else stays English. One strings file per language in `web/i18n/`, so more languages are a single file (#21). The extension stays English.

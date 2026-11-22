@@ -68,7 +68,7 @@ async function unreachable() {
     const r = await ifetch(base + '/ext/history');
     if (r.status === 401) return 'This instance is protected. Enter its access token in Settings.';
   } catch (_) { /* not reachable */ }
-  return 'Cannot reach ' + base + '. Check the address in Settings and your network or VPN.';
+  return cannotReach(base);
 }
 
 async function refreshJob() {

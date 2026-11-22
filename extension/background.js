@@ -192,7 +192,14 @@ async function notifyItem(item) {
   const done = item.status === 'finished' && item.filename;
   const id = notifId(item.url || title);
   // The mapping holds target URL and file: clicking the body opens the
-  // original, the button downloads the file.
+  // original, the button downloads the file. Mappings of notifications that
+  // are gone (dismissed without a click) are dropped here.
+  try {
+    const live = await browser.notifications.getAll();
+    const stale = Object.keys(await browser.storage.local.get(null))
+      .filter((k) => k.startsWith('n:') && !(k.slice(2) in live));
+    await browser.storage.local.remove(stale);
+  } catch (_) { /* cleanup is an extra */ }
   await browser.storage.local.set({
     ['n:' + id]: { url: item.url || '', filename: done ? item.filename : '' }
   });

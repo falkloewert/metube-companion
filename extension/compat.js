@@ -29,9 +29,18 @@ async function authHeaders() {
   return token ? { 'X-Companion-Token': token } : {};
 }
 
+function cannotReach(base) {
+  return 'Cannot reach ' + base + '. Check the address in Settings and your network or VPN.';
+}
+
+// The browser's own network error ("Failed to fetch") says nothing to users.
 async function ifetch(url, init = {}) {
   const headers = Object.assign({}, init.headers, await authHeaders());
-  return fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+  try {
+    return await fetch(url, Object.assign({ credentials: 'include' }, init, { headers }));
+  } catch (_) {
+    throw new Error(cannotReach(await getBase()));
+  }
 }
 
 async function downloadHeaders() {
