@@ -33,7 +33,7 @@ function translatePage(root) {
 }
 
 // Bump together with the extension manifests on every release.
-const COMPANION_VERSION = '0.3.0';
+const COMPANION_VERSION = '0.4.0';
 const ISSUES_URL = 'https://github.com/falkloewert/metube-companion/issues/new';
 
 // Prefilled bug report. Opens GitHub in the browser; nothing is sent until

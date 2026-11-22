@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 - 2026-11-22
 
 Note: update the image and the extension together. **If you open the companion by a domain name** (reverse proxy, `nas.example.com`, `*.ts.net`), add it to the new `COMPANION_HOSTS`, otherwise it answers "421". IP addresses, `localhost`, names without a dot and `.local` keep working. `compose.desktop.yml` now takes `COMPANION_TOKEN` and `COMPANION_HOSTS` from `.env`: if you set the token in the compose file before, move it to `.env` before replacing the file, otherwise the instance runs without a token.
 
