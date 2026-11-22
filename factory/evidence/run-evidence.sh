@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# managed by glass-factory kit v1.1.0 (d8ce937), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
+# managed by glass-factory kit v1.2.0 (8b5ada6), do not edit; change factory/evidence.config.sh or factory/evidence/tests/
 set -euo pipefail
 
 # Level 0 + Level 1 evidence run for a project's factory sandbox, inside isolated Docker containers:
