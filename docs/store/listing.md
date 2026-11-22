@@ -13,34 +13,34 @@ Copy from here when submitting (#10). Package: the release assets `metube-compan
 
 **Description:**
 
-MeTube Companion sends the page you are on to your own MeTube server (a self-hosted web UI for yt-dlp). It needs the free MeTube Companion container next to MeTube; it does not download anything by itself and talks to no other server.
+MeTube Companion sends the page you are on to your own MeTube server (a self-hosted web UI for yt-dlp). It needs the free MeTube Companion container next to MeTube; it does not download anything by itself and talks to no other server (the language of a transcript is also looked up through your server).
 
 - Video, Audio or Text: tap a tile once to pick, again to send.
 - Transcripts as plain text, ready to copy or save as Markdown; the spoken language is detected for YouTube.
-- Sends your YouTube, Instagram or TikTok cookies with the link, so "Sign in to confirm you're not a bot" and videos you can only see signed in work. Other sites never get cookies.
+- Optional, off until you allow it on the settings page: sends your YouTube, Instagram or TikTok cookies with the link, so "Sign in to confirm you're not a bot" and videos you can only see signed in work. Other sites never get cookies.
 - Shows progress and notifies you when the download is done; save the file to this computer with one click.
-- Optional video quality (up to 1080p, 720p, 480p) and audio format (M4A, MP3, Opus).
+- Optional video quality (Best, 1080p, 720p, 480p) and audio format (M4A, MP3, Opus).
 - Open source (MIT), no tracking, no account.
 
 Setup: install the container (see the homepage), then enter its address on the settings page that opens after installing.
 
 ## Chrome Web Store: privacy tab
 
-- **Single purpose:** Send the current page's link, with the matching site cookies, to the user's own self-hosted MeTube server for download.
+- **Single purpose:** Send the current page's link (optionally with the matching site cookies) to the user's own self-hosted MeTube server for download.
 - **Permission justifications:**
-  - cookies: Reads YouTube, Instagram or TikTok cookies only when the user sends a link from that site, and uploads them to the user's own server so yt-dlp can download signed-in content.
+  - cookies (optional, requested on the settings page only if the user ticks "Send my cookies"): Reads YouTube, Instagram or TikTok cookies only when the user sends a link from that site, and uploads them to the user's own server so yt-dlp can download signed-in content.
   - storage: Stores the server address, optional access token, download settings and running jobs locally.
   - downloads: Saves a finished file from the user's server when the user clicks save.
   - alarms: Polls the user's server for progress of a running job until it finishes.
   - activeTab: Reads the current tab's URL when the user opens the popup.
-  - contextMenus: Adds "Send to MeTube" to the right-click menu for links.
+  - contextMenus: Adds "Send to MeTube" to the right-click menu for links and pages.
   - notifications: Tells the user when a download is done or failed.
-  - Host permissions: YouTube, Instagram, TikTok to read their cookies; localhost:8081 as the default server; any other server address only after the user enters it and approves (optional permission).
+  - Host permissions: localhost:8081 as the default server. Optional, each only after the user approves it on the settings page: the server address the user enters (any host, because the server can be at any address on the user's network), and YouTube, Instagram, TikTok together with the cookies permission.
   - Remote code: No, all code is in the package.
-- **Data usage:** collects "Authentication information" (site cookies) and "Web history" (the link the user sends); both go only to the user's own server. Not sold, not used for unrelated purposes, not used for creditworthiness. Certify all three statements.
+- **Data usage:** collects "Web history" (the link the user sends) and, only if the user allows cookies, "Authentication information" (site cookies); both go only to the user's own server. Not sold, not used for unrelated purposes, not used for creditworthiness. Certify all three statements.
 
 ## Firefox Add-ons
 
-- Data collection is already declared in `manifest.json` (`authenticationInfo`, `browsingActivity`).
+- Data collection is declared in `manifest.json`: `browsingActivity` required, `authenticationInfo` optional (asked together with the cookies permission).
 - **Notes to reviewer:** "Requires a self-hosted MeTube + MeTube Companion server to do anything. Quick test setup: `docker compose -f compose.desktop.yml up -d` from the repository, then keep the default address http://localhost:8081. Source is the unminified code in the package; build script: extension/build.sh."
 - Source code upload: not needed (no minification or bundling).

@@ -2,15 +2,17 @@
   "manifest_version": 2,
   "name": "MeTube Companion",
   "version": "0.3.0",
-  "description": "Sends the current link with matching cookies to your own MeTube instance.",
+  "description": "Sends the current link, optionally with that site's cookies, to your own MeTube instance.",
   "browser_specific_settings": {
     "gecko": {
       "id": "metube-companion@falkloewert",
       "strict_min_version": "140.0",
       "data_collection_permissions": {
         "required": [
-          "authenticationInfo",
           "browsingActivity"
+        ],
+        "optional": [
+          "authenticationInfo"
         ]
       }
     },
@@ -19,17 +21,13 @@
     }
   },
   "permissions": [
-    "cookies",
     "storage",
     "downloads",
     "alarms",
     "activeTab",
     "contextMenus",
     "notifications",
-    "http://localhost:8081/*",
-    "https://*.youtube.com/*",
-    "https://*.instagram.com/*",
-    "https://*.tiktok.com/*"
+    "http://localhost:8081/*"
   ],
   "background": {
     "scripts": [
@@ -57,6 +55,7 @@
     "open_in_tab": true
   },
   "optional_permissions": [
+    "cookies",
     "http://*/*",
     "https://*/*"
   ]

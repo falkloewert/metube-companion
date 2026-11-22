@@ -51,8 +51,8 @@
     'Audio format': 'Audioformat',
     'Best': 'Beste',
     'Cookies': 'Cookies',
-    'Instagram and YouTube require a sign-in for some content. The browser extension sends your cookies with every request; you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads.':
-      'Instagram und YouTube verlangen für manche Inhalte eine Anmeldung. Die Browser-Erweiterung sendet deine Cookies mit jeder Anfrage; du kannst sie hier auch von Hand hochladen (Netscape-Format, <code>cookies.txt</code>). Sie gelten für alle Downloads.',
+    'YouTube, Instagram and TikTok need a sign-in for some content. The browser extension can send the site cookies with every link (setting "Send my cookies"); you can also upload them manually here (Netscape format, <code>cookies.txt</code>). They apply to all downloads; the extension replaces an uploaded file.':
+      'YouTube, Instagram und TikTok verlangen für manche Inhalte eine Anmeldung. Die Browser-Erweiterung kann die Cookies der Seite mit jedem Link senden (Einstellung „Send my cookies“); du kannst sie hier auch von Hand hochladen (Netscape-Format, <code>cookies.txt</code>). Sie gelten für alle Downloads; die Erweiterung ersetzt eine hochgeladene Datei.',
     'Choose file': 'Datei wählen',
     'Remove': 'Entfernen',
     'Extension and help': 'Erweiterung und Hilfe',

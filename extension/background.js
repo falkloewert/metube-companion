@@ -41,7 +41,7 @@ async function collectCookies(url) {
     try {
       list = await browser.cookies.getAll({ url: root });
     } catch (_) {
-      continue; // no permission for this site, that is fine
+      continue; // cookies not allowed in the settings, that is fine
     }
     for (const c of list) {
       const key = [c.domain, c.path, c.name].join('|');
@@ -53,14 +53,14 @@ async function collectCookies(url) {
   return cookies;
 }
 
-// Spoken language (rules in shared.js). The extension fetches the watch
-// page itself, with the browser's YouTube cookies. On error: German.
+// Spoken language (rules in shared.js), from the watch page that the
+// instance fetches (/yt/<id>, as in the web UI). On error: German.
 async function detectLang(url) {
   try {
     const id = ytId(url);
     if (!id) return 'de';
-    const res = await fetch('https://www.youtube.com/watch?v=' + id, { credentials: 'include' });
-    return langFromWatchPage(await res.text());
+    const res = await ifetch((await getBase()) + '/ext/yt/' + id);
+    return res.ok ? langFromWatchPage(await res.text()) : 'de';
   } catch (_) {
     return 'de';
   }

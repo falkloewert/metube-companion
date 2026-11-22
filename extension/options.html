@@ -21,6 +21,9 @@
     #status { min-height: 20px; color: var(--text); }
     #status.ok { color: var(--ok-ink); }
     #status.bad { color: var(--bad); }
+    .check { display: flex; gap: 10px; align-items: flex-start; margin: 18px 0 0; font-size: 14px; color: var(--text); cursor: pointer; }
+    .check input { flex: none; width: 20px; height: 20px; margin: 1px 0 0; accent-color: var(--fill); }
+    .check small { display: block; color: var(--muted); font-size: 13px; }
   </style>
 </head>
 <body>
@@ -31,13 +34,15 @@
     <input id="base" type="url" placeholder="http://localhost:8081" spellcheck="false">
     <label for="token">Access token (only if your instance is protected with one)</label>
     <input id="token" type="password" autocomplete="off" spellcheck="false" placeholder="leave empty if not protected">
+    <label class="check"><input id="cookies" type="checkbox">
+      <span>Send my cookies with YouTube, Instagram and TikTok links
+        <small>Needed for videos you can only see signed in, and when YouTube asks "Sign in to confirm you're not a bot". Only the cookies of the link's site, never your Google account. They are stored on your MeTube server and used for all its downloads.</small></span></label>
     <button id="save">Save</button>
     <label for="videoQuality">Video quality</label>
     <select id="videoQuality"></select>
     <label for="audioFormat">Audio format</label>
     <select id="audioFormat"></select>
     <p id="status" role="status" aria-live="polite"></p>
-    <p>When you send a YouTube, Instagram or TikTok link, the extension also uploads your cookies for that site, so signed-in content can be downloaded. No other sites, never your Google account. The cookies are stored on the MeTube server and used for all downloads.</p>
   </div>
   <script src="compat.js"></script>
   <script src="shared.js"></script>

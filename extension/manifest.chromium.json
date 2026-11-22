@@ -2,9 +2,8 @@
   "manifest_version": 3,
   "name": "MeTube Companion",
   "version": "0.3.0",
-  "description": "Sends the current link with matching cookies to your own MeTube instance.",
+  "description": "Sends the current link, optionally with that site's cookies, to your own MeTube instance.",
   "permissions": [
-    "cookies",
     "storage",
     "downloads",
     "alarms",
@@ -13,10 +12,7 @@
     "notifications"
   ],
   "host_permissions": [
-    "http://localhost:8081/*",
-    "https://*.youtube.com/*",
-    "https://*.instagram.com/*",
-    "https://*.tiktok.com/*"
+    "http://localhost:8081/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -41,5 +37,8 @@
   "optional_host_permissions": [
     "http://*/*",
     "https://*/*"
+  ],
+  "optional_permissions": [
+    "cookies"
   ]
 }

@@ -61,6 +61,8 @@ check 403 "folders cannot be deleted" -X DELETE "$B/files/sub/"
 check 404 "hidden paths blocked" "$B/files/.tmp/"
 check 404 "hidden paths blocked (state folder)" "$B/files/.metube/state"
 curl -s "$B/yt/notanid" | grep -q "MeTube Companion" && ok "/yt/ only proxies video IDs" || bad "/yt/ proxied a non-ID"
+curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/ext/yt/jNQXAC9IVRw" \
+  | grep -qi '^access-control-allow-origin: moz-extension://x' && ok "extension language lookup (/ext/yt/, CORS)" || bad "extension language lookup (/ext/yt/)"
 check 404 "MeTube live updates blocked on /ext/" "$B/ext/socket.io/?EIO=4&transport=polling"
 
 echo "cross-site requests (CSRF)"
@@ -168,11 +170,11 @@ check 403 "files in the trash are not served" "$B/files/.trash/$T/sub/$FKE.mp3"
 check 403 "no CORS preflight for MOVE" -X OPTIONS -H 'Origin: https://evil.example' -H 'Access-Control-Request-Method: MOVE' "$B/files/$FKE.mp4"
 curl -si -X OPTIONS -H 'Origin: https://evil.example' -H 'Access-Control-Request-Method: MOVE' "$B/files/$FKE.mp4" | grep -qi '^access-control' \
   && bad "CORS headers on /files/" || ok "no CORS headers on /files/"
-# Firefox applies CORS to extension pages: the listing (GET only) is readable for them.
-curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/files/" \
-  | grep -qi '^access-control-allow-methods: GET' && ok "extension preflight on /files/ (GET only)" || bad "extension preflight on /files/"
-curl -si -H 'Origin: moz-extension://x' "$B/healthz" | grep -qi '^access-control-allow-origin: moz-extension://x' \
-  && ok "healthz readable for the extension" || bad "healthz without CORS for the extension"
+# Firefox applies CORS to extension pages: the listing is readable for them
+# (preflight for the token header), but no method beyond GET is allowed.
+curl -si -X OPTIONS -H 'Origin: moz-extension://x' -H 'Access-Control-Request-Headers: x-companion-token' "$B/files/" > "$WORK/pre"
+grep -qi '^access-control-allow-origin: moz-extension://x' "$WORK/pre" && ! grep -qi '^access-control-allow-methods' "$WORK/pre" \
+  && ok "extension preflight on /files/ (GET only)" || bad "extension preflight on /files/"
 mkdir -p "$D/.trash/$T"; echo z > "$D/.trash/$T/del.mp4"
 check 204 "delete a file in the trash (empty trash)" -X DELETE "$B/files/.trash/$T/del.mp4"
 rm -rf "$D/.trash" "$D/sub" "$D/$FK".*

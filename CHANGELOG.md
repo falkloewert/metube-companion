@@ -2,7 +2,12 @@
 
 ## Unreleased
 
-- Firefox extension: the popup said "Cannot reach ..." although the instance answered, and the format bar did not see existing files (showed "request" instead of "save"). Firefox applies CORS to extension pages; `/healthz` and the read-only `/files/` listing now answer extension origins (GET only, never MOVE or DELETE). Needs the new image.
+Note: update the image and the extension together.
+
+- Extension: sending cookies is optional. Installing asks for no cookie or site access any more; the settings page (opens after installing) has "Send my cookies with YouTube, Instagram and TikTok links", asked by the browser together with the instance address. Unticked, links are sent without cookies.
+- Extension: the spoken language of a transcript is looked up through the instance (`/ext/yt/<id>`, the same as the web UI) instead of fetching YouTube directly.
+- Firefox extension: the popup said "Cannot reach ..." although the instance answered, and the format bar did not see existing files (showed "request" instead of "save"). Firefox applies CORS to extension pages; the read-only `/files/` listing and `/ext/yt/` now answer extension origins (GET only, never MOVE or DELETE). The popup checks the instance via `/ext/`, so a login proxy that lets `/ext/` and `/files/` through (INSTALL.md) works.
+- Docs: README FAQ on the trash, store texts and privacy policy match the optional cookies.
 - Extension: an unreachable instance says "Cannot reach <address> ..." instead of the browser's "Failed to fetch"; the settings page no longer adds the network hint to "the access token is wrong".
 - Extension: notification data of dismissed notifications is cleaned up.
 

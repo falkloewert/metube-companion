@@ -14,15 +14,21 @@ map $http_origin $metube_ext_origin {
     ~^chrome-extension:// $http_origin;
 }
 
-# Preflight of the extension (token header) for the read-only /files/
-# listing; other origins get no CORS headers at all.
-map "$request_method:$metube_ext_origin" $ext_preflight {
-    "~^OPTIONS:." 1;
-    default "";
-}
+# CORS for the extension's reads of /files/ and /yt/ (Firefox applies CORS
+# to extension pages). Every value is empty for other origins, so they get no
+# CORS headers at all; only GET is allowed (no Allow-Methods), never MOVE or
+# DELETE.
 map $metube_ext_origin $ext_cors_credentials {
     "" "";
     default "true";
+}
+map $metube_ext_origin $ext_cors_headers {
+    "" "";
+    default "X-Companion-Token";
+}
+map "$request_method:$metube_ext_origin" $ext_preflight {
+    "~^OPTIONS:." 1;
+    default "";
 }
 
 # Optional access token: sent by the extension as X-Companion-Token, by the
@@ -159,12 +165,19 @@ server {
         }
     }
 
-    # Language detection for "Text" in the web UI: the watch page of a
-    # YouTube video, only for a valid 11-character ID, without cookies.
-    # The extension fetches the page itself; the web page cannot because of CORS.
-    location ~ "^/yt/([A-Za-z0-9_-]{11})$" {
+    # Language detection for "Text": the watch page of a YouTube video, only
+    # for a valid 11-character ID, without cookies. The web UI uses /yt/, the
+    # extension /ext/yt/ (behind a login proxy only /ext/ and /files/ are open).
+    location ~ "^/(?:ext/)?yt/([A-Za-z0-9_-]{11})$" {
         resolver ${NGINX_LOCAL_RESOLVERS} valid=300s ipv6=off;
         set $yt_id $1;
+        add_header Access-Control-Allow-Origin $metube_ext_origin always;
+        add_header Access-Control-Allow-Credentials $ext_cors_credentials always;
+        add_header Access-Control-Allow-Headers $ext_cors_headers always;
+        add_header Vary Origin always;
+        if ($ext_preflight) {
+            return 204;
+        }
         if ($auth_ok = 0) {
             return 401;
         }
@@ -195,8 +208,7 @@ server {
     # (/downloads/.trash/<unix time>/<path>, see $files_rule above); downloads
     # still go through /api/download/. Hidden paths other than the trash
     # (.tmp, .metube) are blocked. CORS only lets the extension read the
-    # listing (Firefox applies CORS to its pages): GET, never MOVE or DELETE,
-    # so other web pages cannot use this path.
+    # listing (see $ext_preflight), so other web pages cannot use this path.
     # A prefix location with a plain alias is required: nginx maps the
     # Destination header of MOVE with the config of the location, a regex
     # alias would resolve it to the source path again.
@@ -204,13 +216,9 @@ server {
         alias /downloads/;
         add_header Access-Control-Allow-Origin $metube_ext_origin always;
         add_header Access-Control-Allow-Credentials $ext_cors_credentials always;
+        add_header Access-Control-Allow-Headers $ext_cors_headers always;
         add_header Vary Origin always;
         if ($ext_preflight) {
-            add_header Access-Control-Allow-Origin $metube_ext_origin always;
-            add_header Access-Control-Allow-Credentials "true" always;
-            add_header Access-Control-Allow-Headers "X-Companion-Token" always;
-            add_header Access-Control-Allow-Methods "GET" always;
-            add_header Vary Origin always;
             return 204;
         }
         if ($auth_ok = 0) {
@@ -254,8 +262,6 @@ server {
     location = /healthz {
         access_log off;
         default_type text/plain;
-        add_header Access-Control-Allow-Origin $metube_ext_origin always;
-        add_header Vary Origin always;
         return 200 "ok\n";
     }
 

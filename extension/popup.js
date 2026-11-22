@@ -61,11 +61,13 @@ let text = null;              // { rel, promise } for preview, copy, .md
 const progs = new Map();
 
 // Why the instance does not answer: protected (token missing or wrong) or
-// not reachable at all.
+// not reachable at all; empty if it answers. Uses /ext/, which a login proxy
+// lets through (INSTALL.md).
 async function unreachable() {
   const base = await getBase();
   try {
     const r = await ifetch(base + '/ext/history');
+    if (r.ok) return '';
     if (r.status === 401) return 'This instance is protected. Enter its access token in Settings.';
   } catch (_) { /* not reachable */ }
   return cannotReach(base);
@@ -102,7 +104,7 @@ async function refreshJob() {
     render(done, running, byKind(siblings(done || { url: lastUrl }, listings, stemBase)));
   } catch (_) {
     job.hidden = true;
-    if (!status.textContent) setStatus(await unreachable(), true);
+    if (!status.textContent) setStatus((await unreachable()) || 'That did not work.', true);
   } finally {
     refreshing = false;
   }
@@ -234,8 +236,7 @@ $('ver').textContent = 'v' + browser.runtime.getManifest().version;
 
 // Tell right away when the instance is not reachable (wrong address,
 // not on the home network or VPN, missing permission).
-getBase().then((base) => fetch(base + '/healthz').then((r) => { if (!r.ok) throw new Error(); }))
-  .catch(async () => setStatus(await unreachable(), true));
+unreachable().then((msg) => { if (msg) setStatus(msg, true); });
 
 // After opening, keep showing the last video (also if the context menu
 // started it).

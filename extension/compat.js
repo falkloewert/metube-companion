@@ -22,6 +22,16 @@ async function getBase() {
   return (base || DEFAULT_BASE).replace(/\/+$/, '');
 }
 
+// Sending cookies is optional: the settings page asks for it (one browser
+// prompt together with the instance address), never the install.
+const COOKIE_ORIGINS = ['https://*.youtube.com/*', 'https://*.instagram.com/*', 'https://*.tiktok.com/*'];
+function cookiePermissions() {
+  const p = { permissions: ['cookies'], origins: COOKIE_ORIGINS.slice() };
+  // Firefox also has a data collection consent for it (manifest.json).
+  if (browser.runtime.getManifest().browser_specific_settings) p.data_collection = ['authenticationInfo'];
+  return p;
+}
+
 // Optional access token of a protected instance (COMPANION_TOKEN), sent as a
 // header with every request to the instance.
 async function authHeaders() {

@@ -1,8 +1,9 @@
 'use strict';
 
 // Desktop setup default (DEFAULT_BASE from compat.js); other instances are set
-// here. Saving asks the browser for access to that address (optional host
-// permission) and checks that a MeTube Companion answers there.
+// here. Saving asks the browser for access to that address and, if ticked,
+// to the site cookies (optional permissions), then checks that a MeTube
+// Companion answers there.
 const base = document.getElementById('base');
 const status = document.getElementById('status');
 const token = document.getElementById('token');
@@ -24,9 +25,13 @@ const prefSelects = Object.keys(PREF_OPTIONS).map((k) => {
   return [k, sel];
 });
 
-browser.storage.local.get(['base', 'token', 'prefs']).then(({ base: saved, token: savedToken, prefs }) => {
+const cookies = document.getElementById('cookies');
+
+browser.storage.local.get(['base', 'token', 'prefs']).then(async ({ base: saved, token: savedToken, prefs }) => {
   base.value = saved || DEFAULT_BASE;
   token.value = savedToken || '';
+  // First start: suggested, the browser prompt asks anyway.
+  cookies.checked = !saved || await browser.permissions.contains(cookiePermissions());
   const p = normalizePrefs(prefs);
   prefSelects.forEach(([k, sel]) => { sel.value = p[k]; });
 });
@@ -42,15 +47,22 @@ document.getElementById('save').addEventListener('click', async () => {
     say('Please enter a full address starting with http:// or https://.', true);
     return;
   }
-  // Must run directly in the click handler, browsers only allow it there.
+  // One prompt for the address and, if ticked, the cookies. Must run directly
+  // in the click handler, browsers only allow it there.
+  const request = { origins: [origin + '/*'] };
+  if (cookies.checked) {
+    const c = cookiePermissions();
+    Object.assign(request, c, { origins: request.origins.concat(c.origins) });
+  }
   let granted = false;
   try {
-    granted = await browser.permissions.request({ origins: [origin + '/*'] });
+    granted = await browser.permissions.request(request);
   } catch (_) { /* treated as not granted */ }
   if (!granted) {
-    say('The browser did not allow access to ' + origin + '. Without it the extension cannot reach your instance.', true);
+    say('The browser did not allow access to ' + origin + (cookies.checked ? ' and the cookies. Untick the cookies to save without them.' : '. Without it the extension cannot reach your instance.'), true);
     return;
   }
+  if (!cookies.checked) await browser.permissions.remove(cookiePermissions()).catch(() => {});
   const tok = token.value.trim();
   await browser.storage.local.set({ base: value, token: tok });
   say('Saved. Checking the connection …');

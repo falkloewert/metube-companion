@@ -13,7 +13,7 @@ A friendlier web UI and browser extension for [MeTube](https://github.com/alexta
 - **One link, four formats.** Paste a link and pick Video, Audio or Text (transcript); the thumbnail is one tap away on the video's card. Tap once to select, tap again to send.
 - **One card per video.** The history shows every video once, with all formats side by side: *save* what is there, *request* what is missing, and watch progress right inside the cell.
 - **Transcripts that just work.** Detects whether a YouTube video is spoken in English or German (including AI-dubbed videos), fetches the original caption track to dodge YouTube's 429 errors, and turns captions into clean text. Preview, copy, or save as Markdown.
-- **Browser extension** (Chromium; Firefox until it is in the add-on store only as a temporary add-on). Sends the current tab, with the cookies of that site (YouTube, Instagram, TikTok) for signed-in content, shows the same format cells, and notifies you when a download is done.
+- **Browser extension** for Chromium and Firefox. Sends the current tab, optionally with the cookies of that site (YouTube, Instagram, TikTok) for signed-in content, shows the same format cells, and notifies you when a download is done.
 - **Optional download settings.** Pick the video quality (down to 480p) and the audio format (MP3, Opus) once; the tiles keep working with two taps.
 - **Installable on Android**, with a share target: share a link from the YouTube app straight to your instance.
 - **Housekeeping.** Shows how long files stay before automatic cleanup (optional), deletes all formats of a video at once (into a trash, restorable for a few days), clears the whole history with or without files.
@@ -55,13 +55,13 @@ Mount the MeTube download folder at `/downloads`. The container listens on port 
 
 ## FAQ
 
-**"Sign in to confirm you're not a bot"?** YouTube sometimes blocks requests without a signed-in session, especially for audio and transcripts. Send your YouTube cookies with the browser extension (it does this on every send) or upload a `cookies.txt` under *Cookies* in the web UI. Cookies expire; send them again when the message comes back.
+**"Sign in to confirm you're not a bot"?** YouTube sometimes blocks requests without a signed-in session, especially for audio and transcripts. Send your YouTube cookies with the browser extension (tick "Send my cookies" in its settings; it then sends them with every YouTube link) or upload a `cookies.txt` under *Cookies* in the web UI. Cookies expire; send them again when the message comes back.
 
 **Which languages do transcripts support?** For YouTube the companion picks the spoken language: the original audio track (also for AI-dubbed videos), else the only automatic caption track, else manual captions. English stays English, everything else currently becomes German ([#15](../../issues/15) plans any language).
 
 **Why do formats show up as separate files?** MeTube keeps one history entry per link. The companion groups the files of a video by the video ID in the file name (`OUTPUT_TEMPLATE` with `[%(id)s]`), so older files without the ID are grouped by title only.
 
-**Is there a trash?** Not yet ([#12](../../issues/12)). Deleting removes all formats of a video for good.
+**Is there a trash?** Yes. Deleting moves all formats of a video into the hidden folder `.trash` for `TRASH_DAYS` (default 7); the *Trash* section of the web UI restores them or empties the trash. `TRASH_DAYS: "0"` deletes right away.
 
 **Push notification on the phone when a download is done?** MeTube can do that itself: yt-dlp runs a command after each finished file. Add to MeTube's environment (merge with an existing `YTDL_OPTIONS`), with your own [ntfy](https://ntfy.sh) topic or any webhook:
 `YTDL_OPTIONS: '{"postprocessors":[{"key":"Exec","exec_cmd":"curl -s -d %(title)q https://ntfy.sh/YOUR_TOPIC","when":"after_move"}]}'`
