@@ -61,6 +61,9 @@ Plain `KEY=value`, sourced by bash. Required: `PROJECT_PREFIX`, `APP_URL`, `MOCK
 | `ENVIRONMENT_DESC` | empty | Report line "Isolated ... Sandbox (`<this>`, 0 prod secrets)" |
 | `SCOPE_VERIFICATION_RE`, `SCOPE_SENSITIVE_RE`, `SCOPE_SENSITIVE_LABEL` | generic | Which changed files must be disclosed in the report; rendered into the workflow by `install.sh` |
 | `PW_TIMEOUT_MS`, `PW_PROOF_TIMEOUT_MS` | `45000`, same | Playwright test timeouts |
+| `NOTIFY` | `none` | `nextcloud-talk`: push the result and proof video to a Talk room (CI only, see below) |
+| `NOTIFY_NC_URL`, `NOTIFY_NC_USER`, `NOTIFY_NC_TALK_ROOM` | | Nextcloud base URL, bot account, room token; rendered into the workflow |
+| `NOTIFY_RETENTION_DAYS` | `30` | Uploaded videos older than this are deleted on the next run |
 
 ## CI
 
@@ -68,3 +71,24 @@ The workflow runs the sandbox read-only, uploads the bundle and a second job (ne
 publishes GIF, MP4 and screenshots to the `factory-evidence-previews` branch and comments on the PR. GIF first.
 Public repository: the MP4 link goes through jsDelivr pinned to the commit SHA (plays on phones).
 Private repository or MP4 over 20 MB: raw GitHub download, labelled "Download MP4 (phones: use the GIF above)".
+
+## Notify the reviewer (`NOTIFY=nextcloud-talk`)
+
+After the PR comment, the publish job uploads `proof.mp4` into the bot account's files (`Evidence/`) and
+shares it into the Talk room with result, test counts and PR link as caption. Talk plays the video in the
+app and pushes a notification, also for private repositories. Without a video (sandbox failed early) it
+posts the caption as a text message. The step never fails the job.
+
+Setup (once per Nextcloud):
+1. A dedicated account for the bot (no admin, no groups, small quota), not a personal or multi-purpose one:
+   its app password sits in CI secrets. `occ user:add --password-from-env factory-bot`,
+   `occ user:auth-tokens:add factory-bot --name=agent-factory-notify-<date>` (Nextcloud app passwords do not
+   expire: rotate them by hand).
+2. The bot creates a group conversation and adds the reviewers (Talk API or UI); its token is the last part of the room URL.
+3. Config `NOTIFY*`, `install.sh --update`, and the repository secret `NEXTCLOUD_NOTIFY_APP_PASSWORD`
+   (`gh secret set NEXTCLOUD_NOTIFY_APP_PASSWORD -R <owner>/<repo>`; needs repo admin). The Nextcloud must
+   be reachable from the CI runners.
+
+Platform notes for customers: the video shows the application under test. With Nextcloud Talk it stays on
+the customer's own server; with hosted messengers (Telegram, Slack, Teams) it lives on the provider's
+servers. Only Nextcloud Talk is implemented and tested so far.

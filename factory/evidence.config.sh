@@ -38,3 +38,9 @@ SCOPE_SENSITIVE_LABEL="Sensitive paths (Docker, nginx, CI, factory sandbox, test
 
 # The proof flow downloads and waits for simulated downloads.
 PW_PROOF_TIMEOUT_MS=90000
+
+# Reviewer notification (CI): proof video into the Nextcloud Talk room "Glass Factory Beweise".
+NOTIFY=nextcloud-talk
+NOTIFY_NC_URL=https://nextcloud.loewert-lab.ipv64.de
+NOTIFY_NC_USER=factory-bot
+NOTIFY_NC_TALK_ROOM=6prrk8qj
