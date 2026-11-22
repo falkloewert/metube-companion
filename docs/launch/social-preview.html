@@ -1,0 +1,29 @@
+<!doctype html>
+<meta charset="utf-8">
+<!-- Source of social-preview.png (1280x640), the GitHub link preview. Render:
+     agent-browser open file://.../social-preview.html && agent-browser set viewport 1280 640 && agent-browser screenshot social-preview.png -->
+<style>
+  html, body { margin: 0; width: 1280px; height: 640px; overflow: hidden; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: #16202b;
+         background: linear-gradient(135deg, #eef1f5 0%, #dfe6f3 100%); display: flex; align-items: center; }
+  .text { width: 470px; padding: 0 0 0 64px; }
+  .logo { display: flex; align-items: center; gap: 16px; margin-bottom: 28px; }
+  .logo img { width: 72px; height: 72px; }
+  h1 { font-size: 46px; line-height: 1.05; margin: 0; }
+  p { font-size: 26px; line-height: 1.35; color: #3d4a5c; margin: 0 0 26px; }
+  ul { list-style: none; padding: 0; margin: 0; font-size: 21px; line-height: 1.7; color: #16202b; }
+  li::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 12px;
+               background: linear-gradient(135deg, #0b6bcb, #6a5cff); vertical-align: middle; }
+  .shots { position: relative; flex: 1; height: 640px; }
+  .desk { position: absolute; left: 30px; top: 90px; width: 640px; border-radius: 12px; box-shadow: 0 18px 50px rgba(22,32,43,.25); }
+  .ext { position: absolute; left: 500px; top: 230px; width: 200px; border-radius: 12px; box-shadow: 0 18px 50px rgba(22,32,43,.35); }
+</style>
+<div class="text">
+  <div class="logo"><img src="../../extension/icon.svg" alt=""><h1>MeTube<br>Companion</h1></div>
+  <p>A friendlier web UI and browser extension for the self-hosted MeTube.</p>
+  <ul><li>Video, audio or transcript in one tap</li><li>One card per video, all formats</li><li>Chrome, Firefox, Android share</li></ul>
+</div>
+<div class="shots">
+  <img class="desk" src="../screenshots/desktop.png" alt="">
+  <img class="ext" src="../screenshots/extension.png" alt="">
+</div>
