@@ -40,6 +40,25 @@ Disclosure: built with heavy help from AI coding agents; I reviewed and tested e
 
 Feedback welcome, especially which sites or formats you would want next.
 
+### Megathread comment (launch, template of the thread)
+
+**Project Name:** MeTube Companion
+
+**Repo/Website Link:** https://github.com/falkloewert/metube-companion
+
+**Description:** A friendlier web UI and browser extension for MeTube (the self-hosted web UI for yt-dlp). It sits next to an unchanged MeTube and adds:
+
+- One card per video with all formats side by side (video, audio, transcript, thumbnail): save what is there, request what is missing, progress inside the cell.
+- Transcripts as clean text: preview, copy, or save as Markdown. Detects English vs. German (incl. AI-dubbed videos) and uses the original caption track, which avoids most of YouTube's 429 errors.
+- Browser extension for Chrome (Chrome Web Store) and Firefox (Firefox Add-ons): sends the open tab in one tap, notifies when done, optionally passes that site's cookies (YouTube, Instagram, TikTok only) for "Sign in to confirm you're not a bot".
+- Installable on Android with a share target; optional auto-delete with a restorable trash.
+
+Demo (76 s): https://github.com/falkloewert/metube-companion/blob/main/docs/demo.mp4
+
+**Deployment:** One extra container (nginx) next to MeTube, image on GHCR. Docker Compose files for desktop and server bring both; README quick start and INSTALL.md walk through every option. No login of its own: keep it on your LAN/VPN or behind your auth proxy (optional access token).
+
+**AI Involvement:** Built with heavy help from AI coding agents. I reviewed and tested every change; there is a test suite, an end-to-end smoke test against a real MeTube, and an offline sandbox with a mock MeTube.
+
 ## Reddit r/DataHoarder
 
 Rules (checked 2026-11-22): no ads, "No AI slop", posts need context. A free tool by its author is fine; keep the AI disclosure and lead with the engineering, not marketing.
