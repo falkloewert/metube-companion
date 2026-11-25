@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- The extension is in the [Chrome Web Store](https://chromewebstore.google.com/detail/jbbofgfomolpmigffpdnmodnelcagelp). The web UI, README and install guide link it instead of the developer-mode install.
+- The extension is in [Firefox Add-ons](https://addons.mozilla.org/firefox/addon/metube-companion/) and the [Chrome Web Store](https://chromewebstore.google.com/detail/jbbofgfomolpmigffpdnmodnelcagelp). The web UI, README and install guide link it instead of the developer-mode install.
 
 ## 0.5.0 - 2026-11-22
 

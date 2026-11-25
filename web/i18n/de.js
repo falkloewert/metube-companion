@@ -58,10 +58,10 @@
     'Choose file': 'Datei wählen',
     'Remove': 'Entfernen',
     'Extension and help': 'Erweiterung und Hilfe',
-    'The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Chrome, Brave, Edge: install it from the Chrome Web Store. Firefox keeps unsigned extensions only until restart, see the <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">install guide</a>.':
-      'Die Erweiterung sendet den Link des offenen Tabs an diese Seite (mit den Cookies der Seite, wenn du es in ihren Einstellungen erlaubst). Chrome, Brave, Edge: aus dem Chrome Web Store installieren. Firefox behält unsignierte Erweiterungen nur bis zum Neustart, siehe die <a href="https://github.com/falkloewert/metube-companion/blob/main/INSTALL.md#43-browser-extension" target="_blank" rel="noopener">Installationsanleitung</a>.',
+    'The extension sends the link of the open tab to this page (with the site cookies, if you allow it in its settings). Install it from the Chrome Web Store (Chrome, Brave, Edge) or from Firefox Add-ons, then enter the address of this page in its settings.':
+      'Die Erweiterung sendet den Link des offenen Tabs an diese Seite (mit den Cookies der Seite, wenn du es in ihren Einstellungen erlaubst). Installiere sie aus dem Chrome Web Store (Chrome, Brave, Edge) oder aus Firefox Add-ons und trage dann die Adresse dieser Seite in ihren Einstellungen ein.',
     'Chrome Web Store': 'Chrome Web Store',
-    'Firefox extension': 'Firefox-Erweiterung',
+    'Firefox Add-ons': 'Firefox Add-ons',
     'Report a problem': 'Problem melden',
 
     // Format cells (shared.js): VERBS, FORMATS

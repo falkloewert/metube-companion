@@ -7,7 +7,7 @@ Assets: `docs/demo.gif`, `docs/demo.mp4`, `docs/screenshots/*.png`, `docs/launch
 Links:
 - Repo: https://github.com/falkloewert/metube-companion
 - Chrome: https://chromewebstore.google.com/detail/jbbofgfomolpmigffpdnmodnelcagelp
-- Firefox: (after approval)
+- Firefox: https://addons.mozilla.org/firefox/addon/metube-companion/
 
 ## Core text
 
@@ -27,7 +27,7 @@ I use MeTube (the self-hosted web UI for yt-dlp) a lot, mostly to grab transcrip
 
 - **One card per video**, all formats side by side: video, audio, transcript, thumbnail. Save what is there, request what is missing, progress runs inside the cell.
 - **Transcripts as text**: preview with word count, copy, or save as Markdown. Detects English vs. German (incl. AI-dubbed videos) and uses the original caption track, which avoids most of YouTube's 429 errors.
-- **Browser extension** (Chrome Web Store, Firefox): sends the open tab in one tap, notifies when done. Optionally sends that site's cookies (YouTube, Instagram, TikTok only) for "Sign in to confirm you're not a bot".
+- **Browser extension** (Chrome Web Store, Firefox Add-ons): sends the open tab in one tap, notifies when done. Optionally sends that site's cookies (YouTube, Instagram, TikTok only) for "Sign in to confirm you're not a bot".
 - **Android**: installable as an app with a share target.
 - **Housekeeping**: optional auto-delete after N days, trash with restore.
 
